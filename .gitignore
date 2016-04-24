@@ -60,3 +60,7 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+# Data
+/data/raw_data/*
+/data/.DS_Store
