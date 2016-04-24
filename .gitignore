@@ -62,5 +62,6 @@ target/
 .ipynb_checkpoints
 
 # Data
-/data/raw_data/*
-/data/.DS_Store
+/data/*
+/work/*
+*sentinel
