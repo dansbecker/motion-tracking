@@ -9,12 +9,13 @@ from os.path import join, exists
 
 class ImageDownloader(object):
 
-    def __init__(self, image_url_df, target_path='data/images', nb_workers=64):
+    def __init__(self, image_url_df, target_path='data/images', nb_workers=32):
         self._failed_to_capture_path = 'work/failed_to_capture_images.json'
         self.image_urls = image_url_df.itertuples()
         self.target_path = target_path
         self.nb_workers = nb_workers
         self.imgs_to_request = image_url_df.shape[0]
+        self.imgs_previously_captured = 0
         self.imgs_requested = 0
         self.failed_img_requests = 0
         socket.setdefaulttimeout(5)
@@ -38,15 +39,17 @@ class ImageDownloader(object):
     def run(self):
         print('Images to request: ', self.imgs_to_request)
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.nb_workers) as worker_pool:
-            for file_num, fname, img_src in self.image_urls:
-                worker_pool.submit(self.get_one_img(fname, img_src))
-                if (self.imgs_requested % 5000 == 0):
-                    print('Images requested: ', self.imgs_requested)
+            for _, fname, img_src in self.image_urls:
+                if ((self.imgs_requested + self.imgs_previously_captured) % 5000 == 0):
+                    print('Images requested this run: ', self.imgs_requested)
+                    print('Images skipped because already captured: ', self.imgs_previously_captured)
                     print('Failed image requests: ', self.failed_img_requests)
+                worker_pool.submit(self.get_one_img(fname, img_src))
 
     def get_one_img(self, fname, url):
         local_img_path = join(self.target_path, fname)
         if exists(local_img_path):
+            self.imgs_previously_captured += 1
             return
         try:
             self.imgs_requested += 1
