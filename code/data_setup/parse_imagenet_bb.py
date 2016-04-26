@@ -5,7 +5,22 @@ import os
 import itertools
 import xml.etree.ElementTree as ET 
 
-def parse_file(bbox_dir, filepath): 
+def parse_file(bbox_dir, filename): 
+    """Parse an individual XML file and grab the relevant elements. 
+
+    Args: 
+    ----
+        bbox_dir: str
+            Holds the directory path to the XML file. 
+        filename: str
+            Holds the name of the XML file. To be attached to the 
+            `bbox_dir` to be read in and parsed. 
+
+    Output: 
+    ------
+        output_lst: list of lists 
+            Holds lists of the values parsed from an XML file. 
+    """
     tree = ET.parse(bbox_dir + filepath)
     root = tree.getroot()
 
@@ -47,7 +62,5 @@ if __name__ == '__main__':
     end_lst = []
     for filename in bbox_xml_filenames: 
         end_lst.extend(parse_file(bbox_dir, filename))
-    # parsed_results = [parse_file(bbox_dir, filename) for \
-    #      filename in bbox_xml_filenames]
 
 
