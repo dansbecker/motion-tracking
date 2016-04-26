@@ -21,13 +21,11 @@ def parse_file(bbox_dir, filename):
         output_lst: list of lists 
             Holds lists of the values parsed from an XML file. 
     """
-    tree = ET.parse(bbox_dir + filepath)
+    tree = ET.parse(bbox_dir + filename)
     root = tree.getroot()
 
     output_lst = []
-    size_node = root.find('size')
-    width = size_node.find('width').text
-    height = size_node.find('height').text
+    width, height = parse_size(root)
 
     for child in root.findall('./'): 
         if child.tag == "object": 
@@ -53,6 +51,25 @@ def parse_file(bbox_dir, filename):
             output_lst.append(object_lst)
 
     return output_lst
+
+def parse_size(root): 
+    """Parse the width and height of the image out of the root node. 
+
+    Args: 
+    ----
+        root: xml.etree.ElementTree.Element
+
+    Output: 
+    ------
+        width: str
+        height str
+    """
+
+    size_node = root.find('size')
+    width = size_node.find('width').text
+    height = size_node.find('height').text
+
+    return width, height
     
 if __name__ == '__main__': 
     bbox_dir = sys.argv[1]
