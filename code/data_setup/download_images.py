@@ -1,16 +1,18 @@
 import concurrent.futures
 import itertools
 import json
+import os
 import pandas as pd
 import socket
+import sys
 import urllib.request
-import os
+
 from os.path import join, exists
 
 class ImageDownloader(object):
 
-    def __init__(self, image_url_df, target_path='../../data/images', nb_workers=32):
-        self._failed_to_capture_path = '../../work/failed_to_capture_images.json'
+    def __init__(self, image_url_df, target_path='data/images', nb_workers=100):
+        self._failed_to_capture_path = 'work/failed_to_capture_images.json'
         self.image_urls = image_url_df.itertuples()
         self.target_path = target_path
         self.nb_workers = nb_workers
@@ -60,15 +62,18 @@ class ImageDownloader(object):
 
 
 if __name__ == "__main__":
-    xml_files_by_dir = (i[2] for i in os.walk('../../data/ILSVRC2014_DET_bbox_train'))
+    dataset_id = sys.argv[1]
+    bbox_dir = 'data/ILSVRC/bb/' + dataset_id
+    images_dir = 'data/ILSVRC/images/' + dataset_id
+    xml_files_by_dir = (i[2] for i in os.walk(bbox_dir))
     bbox_xml_files = itertools.chain(*xml_files_by_dir)
     imgs_with_bbox_xml = set([f.replace('.xml', '') for f in bbox_xml_files])
     # We had access to ilsvrc12_urls.txt but it is a subset of fall11_ruls.txt
-    url_list = pd.read_table('../../data/fall11_urls.txt',
+    url_list = pd.read_table('data/fall11_imagenet_urls.txt',
                              names=['image_fname', 'url'],
                              error_bad_lines=False,
                              warn_bad_lines=True,
                              encoding='ISO-8859-1') # just a guess. utf-8 causes error
     imgs_to_download = url_list.query("image_fname in @imgs_with_bbox_xml")
-    with ImageDownloader(imgs_to_download) as img_downloader:
+    with ImageDownloader(imgs_to_download, images_dir) as img_downloader:
         img_downloader.run()
