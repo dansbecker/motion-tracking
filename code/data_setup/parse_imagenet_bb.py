@@ -93,8 +93,7 @@ if __name__ == '__main__':
     bbox_xml_filenames = itertools.chain(*xml_files_by_dir)
 
     all_bboxes = (parse_file(bbox_dir, filename) for filename in bbox_xml_filenames)
-    end_lst_iterator = itertools.chain(*all_bboxes)
-    end_lst = [bbox_lst for bbox_lst in end_lst_iterator]
+    end_lst = list(itertools.chain(*all_bboxes))
 
     cols = ['width', 'height', 'name', 'subcategory', 'xmin', 'xmax', 
         'ymin', 'ymax']
