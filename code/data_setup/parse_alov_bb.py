@@ -24,16 +24,33 @@ def parse_file(bbox_dir, filename):
     output_lst = []
 
     with open(bbox_dir + filename) as f: 
-        filename_parts = filename.split('_')
-        for line in f: 
-            line_parts = line.split()
-            object_lst = [filename_parts[0], filename, line_parts[0], 
-                    line_parts[1], line_parts[2], line_parts[3], 
-                    line_parts[4], line_parts[5], line_parts[6], 
-                    line_parts[7], line_parts[8]]
-            output_lst.append(object_lst) 
+        output_lst = [parse_line(filename, line) for line in f]
 
     return output_lst 
+
+def parse_line(filename, line): 
+    """Parse an individual line from an `.ann` file. 
+
+    Args: 
+    ----
+        filename: str
+        line: str
+
+    Output: 
+    ------
+        object_lst: list
+            Parsed list of elements. 
+    """
+
+    filename_parts = filename.split('_')
+    line_parts = line.split()
+    object_lst = [filename_parts[0], filename, line_parts[0], 
+            line_parts[1], line_parts[2], line_parts[3], 
+            line_parts[4], line_parts[5], line_parts[6], 
+            line_parts[7], line_parts[8]]
+
+    return object_lst
+    
 
 if __name__ == '__main__': 
     bbox_dir = sys.argv[1]

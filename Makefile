@@ -31,6 +31,9 @@ work/.alov_bb_sentinel:
 	rm -rf alov300++GT_txtFiles.zip alov300++_rectangleAnnotation_full
 	touch work/.alov_bb_sentinel
 
+work/alov/parsed_bb.csv: work/.alov_bb_sentinel work/.alov_frames_sentinel
+	python code/data_setup/parse_alov_bb.py data/alov/bb/ work/alov/parsed_bb.csv
+
 #########################
 # ILSVRC2014 (ImageNet) #
 #########################
@@ -76,6 +79,6 @@ work/.imagenet_validation_images_sentinel: code/data_setup/download_images.py da
 
 
 imagenet_bb: work/imagenet/parsed_bb.csv 
-alov: work/.alov_frames_sentinel work/.alov_bb_sentinel 
-data: work/.folder_structure_sentinel imagenet_bb alov
+alov_bb: work/alov/parsed_bb.csv
+data: work/.folder_structure_sentinel imagenet_bb alov_bb
 imagenet_images: work/.imagenet_training_images_sentinel work/.imagenet_validation_images_sentinel
