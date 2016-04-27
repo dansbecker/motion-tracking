@@ -92,11 +92,11 @@ if __name__ == '__main__':
     xml_files_by_dir = (i[2] for i in os.walk(bbox_dir))
     bbox_xml_filenames = itertools.chain(*xml_files_by_dir)
 
-    end_lst = []
-    for filename in bbox_xml_filenames: 
-        end_lst.extend(parse_file(bbox_dir, filename))
+    all_bboxes = (parse_file(bbox_dir, filename) for filename in bbox_xml_filenames)
+    end_lst_iterator = itertools.chain(*all_bboxes)
+    end_lst = [bbox_lst for bbox_lst in end_lst_iterator]
 
     cols = ['width', 'height', 'name', 'subcategory', 'xmin', 'xmax', 
         'ymin', 'ymax']
     output_df = pd.DataFrame(data=end_lst, columns=cols)
-    output_df.to_csv(output_filepath)
+    output_df.to_csv(output_filepath, index=False)
