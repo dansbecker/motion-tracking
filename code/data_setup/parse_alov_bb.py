@@ -3,9 +3,27 @@
 import sys
 import os
 import itertools
-import pandas as pd
-import xml.etree.ElementTree as ET 
 
+def parse_file(bbox_dir, filename): 
+    """Parse an individual `.ann` file and output the relevant elements.
+
+    Args: 
+    ----
+        bbox_dir: str
+            Holds the directory path to the `.ann` file. 
+        filename: str
+            Holds the name of the `.ann` file. 
+
+    Output: 
+    ------
+        output_lst: list of lists 
+            Holds the elements grabbed from the `.ann` file. 
+    """
+
+    with open(bbox_dir + filename) as f: 
+        output_lst = [line.split() for line in f]
+
+    return output_lst 
 
 if __name__ == '__main__': 
     bbox_dir = sys.argv[1]
@@ -13,7 +31,9 @@ if __name__ == '__main__':
     ann_files_by_dir = (i[2] for i in os.walk(bbox_dir))
     bbox_ann_filenames = itertools.chain(*ann_files_by_dir)
 
-    end_lst = []
-    for filename in bbox_xml_filenames: 
-        end_lst.extend(parse_file(bbox_dir, filename))
+    first = bbox_ann_filenames.next()
+    out = parse_file(bbox_dir, first)
+    #end_lst = []
+    # for filename in bbox_xml_filenames: 
+    #    end_lst.extend(parse_file(bbox_dir, filename))
 
