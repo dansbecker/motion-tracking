@@ -60,7 +60,7 @@ work/.imagenet_validation_bbox_sentinel:
 
 work/imagenet/parsed_bb.csv: work/.imagenet_training_bbox_sentinel \
 	work/.imagenet_validation_bbox_sentinel
-	bash code/data_setup/parse_ILSVRC_bb.sh data/imagenet/bb/ \
+	python code/data_setup/parse_imagenet_bb.py data/imagenet/bb/ \
 		work/imagenet/parsed_bb.csv
 
 data/fall11_imagenet_urls.txt:
