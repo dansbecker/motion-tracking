@@ -21,36 +21,12 @@ def parse_file(bbox_dir, filename):
             Holds the elements grabbed from the `.ann` file. 
     """
 
-    output_lst = []
+    parsed_df = pd.read_table(bbox_dir + filename, sep=' ', header=None)
+    parsed_df['filename'] = filename
+    parsed_df['directory'] = parsed_df['filename'].apply(lambda fn: fn.split('_')[0])
 
-    with open(bbox_dir + filename) as f: 
-        output_lst = [parse_line(filename, line) for line in f]
+    return parsed_df
 
-    return output_lst 
-
-def parse_line(filename, line): 
-    """Parse an individual line from an `.ann` file. 
-
-    Args: 
-    ----
-        filename: str
-        line: str
-
-    Output: 
-    ------
-        object_lst: list
-            Parsed list of elements. 
-    """
-
-    filename_parts = filename.split('_')
-    line_parts = line.split()
-    object_lst = [filename_parts[0], filename, line_parts[0], 
-            line_parts[1], line_parts[2], line_parts[3], 
-            line_parts[4], line_parts[5], line_parts[6], 
-            line_parts[7], line_parts[8]]
-
-    return object_lst
-    
 def cp_files(filepaths_df, input_dir, output_dir): 
     """Move the files given by the attributes in the input array. 
 
@@ -100,15 +76,16 @@ if __name__ == '__main__':
     bbox_dir = input_dir + 'bb/'
     ann_files_by_dir = (i[2] for i in os.walk(bbox_dir))
     bbox_ann_filenames = itertools.chain(*ann_files_by_dir)
-    all_bboxes = (parse_file(bbox_dir, filename) for filename in bbox_ann_filenames)
-    end_lst = list(itertools.chain(*all_bboxes))
 
-    cols = ['directory_path', 'filename', 'frame', 'x1', 'y1', \
-            'x2', 'y2', 'x3', 'y3', 'x4', 'y4']
-    output_df = pd.DataFrame(data=end_lst, columns=cols)
-    output_df.to_csv(output_filepath, index=False)
+
+    cols = ['frame', 'x1', 'y1', 'x2', 'y2', 'x3', 'y3', 'x4', 
+            'y4', 'filename', 'directory_path']
+    parsed_df = pd.concat(parse_file(bbox_dir, filename) for 
+            filename in bbox_ann_filenames)
+    parsed_df.columns = cols
+    parsed_df.to_csv(output_filepath, index=False)
 
     frames_dir = input_dir + 'frames/'
     filepath_cols = ['directory_path', 'filename', 'frame']
-    filepath_df = output_df[filepath_cols]
+    filepath_df = parsed_df[filepath_cols]
     cp_files(filepath_df, frames_dir, output_dir)
