@@ -3,6 +3,7 @@
 import sys
 import os
 import itertools
+import shutil
 import pandas as pd
 
 def parse_file(bbox_dir, filename): 
@@ -28,7 +29,7 @@ def parse_file(bbox_dir, filename):
     return parsed_df
 
 def cp_files(filepaths_df, input_dir, output_dir): 
-    """Move the files given by the attributes in the input array. 
+    """Copy over the files given by the attributes in the dataframe. 
 
     Args: 
     -----
@@ -37,36 +38,34 @@ def cp_files(filepaths_df, input_dir, output_dir):
             determines the input filepaths. We'll copy the files 
             at these filepaths to the output_dir.
         input_dir: str
-            Holds the first part of the input directory path. 
+            Holds the first part of the input directory path, used 
+            for obtaining the full path pointing to the files to copy. 
         output_dir: str
             Holds the directory of where to copy the file. 
     """
     
+    # The video numbers are zero padded on the left. 
     filepaths_df['vid_num'] = filepaths_df['frame'].astype(str).apply(lambda 
             frame: frame.zfill(8))
+
+    # Need to replace the filename ext. in the DataFrame with `.jpg` and 
+    # provide the full relative path point to what to move. 
     filepaths_df['filename'] = filepaths_df['filename'].apply(lambda filename: 
             filename.replace('.ann', ''))
     filepaths_df['input_filepath'] = input_dir + \
             filepaths_df['directory_path'] + '/' + filepaths_df['filename'] + \
             '/' + filepaths_df['vid_num'] + '.jpg'
+
+    # Need to provide the full relative output path to point to where to move. 
+    # The `filename` is being used as part of what to save so that images 
+    # can be identified (there are lot with the same number, so we need an
+    # identifying feature). 
     filepaths_df['output_filepath'] = output_dir + filepaths_df['filename'] + \
             '_' + filepaths_df['vid_num'] + '.jpg'
+
     for input_fp, output_fp in zip(filepath_df['input_filepath'], 
             filepath_df['output_filepath']): 
-        cp_file(input_fp, output_fp)
-
-def cp_file(input_filepath, output_dir): 
-    """Copy an individual file to the output_dir. 
-
-    Args: 
-    ----
-        input_filepath: str 
-        output_dir: str
-    """
-     
-    cp_command = "cp {in_fp} {out_dir}".format(in_fp=input_filepath, 
-            out_dir=output_dir)
-    os.system(cp_command)
+        shutil.copy(input_fp, output_fp)
 
 if __name__ == '__main__': 
     input_dir = sys.argv[1]
