@@ -5,7 +5,11 @@ import pandas as pd
 from numpy.random import laplace
 
 class Coords(object):
-    '''Utility class to hold coords and automatically calculate height, width and center'''
+    '''Utility class to hold coords and automatically calculate height, width and center
+
+    x0, y0, x1 and y1 are all integers
+    '''
+
     def __init__(self, x0, y0, x1, y1):
         self.x0 = int(x0) # convert to int here. Otherwise shows up in many places
         self.y0 = int(y0)
@@ -17,9 +21,11 @@ class Coords(object):
         self.y_center = (self.y0 + self.y1) / 2
     def __repr__(self):
         return(", ".join([str(i) for i in (self.x0, self.y0, self.x1, self.y1)]))
+    def as_array(self):
+        return np.array([self.x0, self.y0, self.x1, self.y1])
 
 def get_cropping_params(bb_loc_laplace_b_param = 0.2,
-                    bb_size_laplace_b_param = 1. / 15,
+                    bb_size_laplace_b_param = 0.06,
                     bbox_shrinkage_limit = 0.6,
                     bbox_expansion_limit = 1.4):
     '''Get random draws for parameters involved in random crops. Output those params
@@ -53,7 +59,6 @@ def get_cropping_params(bb_loc_laplace_b_param = 0.2,
     x_size_shift = np.clip(x_size_shift, bbox_shrinkage_limit, bbox_expansion_limit)
     y_size_shift = (1 - laplace(scale=bb_size_laplace_b_param))
     y_size_shift = np.clip(y_size_shift, bbox_shrinkage_limit, bbox_expansion_limit)
-    print(x_size_shift, y_size_shift)
     return x_center_shift, y_center_shift, x_size_shift, y_size_shift
 
 def update_box_after_crop(box_coords, crop_coords):
@@ -129,7 +134,7 @@ def get_random_box_to_determine_crop(box_coords):
     box_for_crop = Coords(box_for_crop_x0, box_for_crop_y0, box_for_crop_x1, box_for_crop_y1)
     return box_for_crop
 
-def get_random_crop_coords(box_coords, img_coords):
+def get_crop_coords(box_coords, img_coords, random_crop):
     '''Calculate the boundaries for a new crop and the coords of the correct bounding box
     in that new crop.
 
@@ -137,10 +142,9 @@ def get_random_crop_coords(box_coords, img_coords):
     -----
     box_coords: Coords object with location of bounding box in original img
     img_coords: Coords (basically the size) of original image
-    output_img_width: Desired output width. Does not affect crop, but rather
-        the cropped area is resized to this width
-    output_img_height: Desired output height. Does not affect crop, but rather
-        the cropped area is resized to this height
+    random_crop: If True, create stochastic box to determine crop coords.
+                 If False, create crop based on true bounding box
+                 Cropped area is twice as large (and centered) on box either way
 
     Outputs:
     --------
@@ -149,10 +153,10 @@ def get_random_crop_coords(box_coords, img_coords):
         newly cropped image
     '''
 
-    # box_for_crop denotes the hypothetical bounding box used to create the crop
-    # cropped_area denotes the cropped image data (including area around box_for_crop)
-    # new_box denotes the true bounding box after the crop (with coords based on crop_area)
-    box_for_crop = get_random_box_to_determine_crop(box_coords)
+    if random_crop:
+        box_for_crop = get_random_box_to_determine_crop(box_coords)
+    else:
+        box_for_crop = box_coords
 
     # calc boundary coords of cropped area. Crop_img is twice as big as box_for_crop
     cropped_area_x0 = max(box_for_crop.x_center - box_for_crop.width, 0)
@@ -166,9 +170,13 @@ def get_random_crop_coords(box_coords, img_coords):
     return cropped_area_coords, box_after_crop
 
 def read_bbox_data(raw_image_dir, parsed_bb_path='work/imagenet/parsed_bb.csv'):
+    '''Return df with data about images and bounding boxes.
 
-    # paper says they use .66, but they also have search area that is twice bounding
-    # box. So, 0.5 may be more appropriate.
+    Data captured corresponds to xml files obtained from ImageNet.
+    '''
+
+    # paper says they use .66, but they use search area that is twice bounding box
+    # So, 0.5 may be more appropriate.
     max_box_frac_of_width =  0.66
     max_box_frac_of_height = 0.66
     images_successfully_downloaded = set(os.listdir('data/imagenet/images'))
@@ -182,29 +190,65 @@ def read_bbox_data(raw_image_dir, parsed_bb_path='work/imagenet/parsed_bb.csv'):
                     .query('box_frac_of_width < @max_box_frac_of_width'))
     return bbox_df
 
-def crop_and_resize(img, img_coords, box_coords, output_width, output_height):
+def crop_and_resize(img, img_coords, box_coords, output_width, output_height, random_crop=True):
+    '''Return image and the bounding box after a possibly random crop and resize
 
-    crop_coords, box_after_crop = get_random_crop_coords(box_coords, img_coords)
-    cropped_img = original_img[crop_coords.y0:crop_coords.y1,
-                               crop_coords.x0:crop_coords.x1]
+    Args:
+    -----
+    img: ndarray of image (consistent with opencv format)
+    img_coords: Coordinates of image boundaries
+    box_coords: Bounding box coordinates on img
+    output_width: Desired output width for resizing
+    output_height: Desired output height for resizing
+    random_crop: If True, create stochastic box to determine crop coords.
+                 If False, create crop based on true bounding box
+                 Cropped area is twice as large (and centered) on box either way
+    '''
+
+    crop_coords, box_after_crop = get_crop_coords(box_coords, img_coords, random_crop)
+    cropped_img = img[crop_coords.y0:crop_coords.y1,
+                      crop_coords.x0:crop_coords.x1]
     box_after_crop = update_box_after_crop(box_coords, crop_coords)
     final_img = cv2.resize(cropped_img, (output_width, output_height))
     final_box_coords = update_box_after_resize(box_after_crop, crop_coords,
                                                output_width, output_height)
     return final_img, final_box_coords
 
-if __name__ == "__main__":
-    output_width = 256
-    output_height = 256
+def imagenet_generator(batch_size=50):
+    '''Generator yielding dictionary. Each dictionary is array of data for model
+
+    batch_size: Number of items in list to be returned.
+    '''
     raw_image_dir = 'data/imagenet/images/'
     img_metadata = read_bbox_data(raw_image_dir)
+    output_width = 256
+    output_height = 256
 
-    i = 0
-    for _, row in img_metadata.iterrows():
-        i += 1
-        if i < 10:
-            img = cv2.imread(raw_image_dir + row.filename)
-            img_coords = Coords(0, 0, row.width, row.height)
-            box_coords = Coords(row.xmin, row.ymin, row.xmax, row.ymax)
-            new_img, new_box = crop_and_resize(img, img_coords, box_coords,
-                                               output_width, output_height)
+    start_img_data = []
+    start_box_data = []
+    next_img_data = []
+    next_box_data = []
+
+    while True:
+        batch_df = img_metadata.sample(batch_size)
+        for _, row in batch_df.iterrows():
+            try:
+                img = cv2.imread(raw_image_dir + row.filename)
+                img_coords = Coords(0, 0, row.width, row.height)
+                box_coords = Coords(row.xmin, row.ymin, row.xmax, row.ymax)
+                start_img, start_box = crop_and_resize(img, img_coords, box_coords,
+                                                       output_width, output_height,
+                                                       random_crop=False)
+                next_img, next_box = crop_and_resize(img, img_coords, box_coords,
+                                                   output_width, output_height)
+                start_img_data.append(start_img)
+                start_box_data.append(start_box.as_array())
+                next_img_data.append(next_img)
+                next_box_data.append(next_box.as_array())
+            except:
+                print('Failed on ', row.filename)
+
+        yield {'start_img': np.array(start_img_data),
+               'start_box': np.array(start_box_data),
+               'next_img': np.array(next_img_data),
+               'next_box': np.array(next_box_data)}
