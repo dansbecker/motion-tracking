@@ -3,11 +3,10 @@ work/.folder_structure_sentinel:
 	mkdir -p data/imagenet/bb
 	mkdir data/imagenet/images
 
-	mkdir -p data/alov/bb/bb
-	mkdir data/alov/frames
+	mkdir -p data/alov/bb
 
 	mkdir -p work/imagenet
-	mkdir work/alov
+	mkdir -p work/alov/images
 
 	touch work/.folder_structure_sentinel
 
@@ -16,25 +15,25 @@ work/.folder_structure_sentinel:
 ####################
 
 # Frames #
-data/alov/frames/alov300++_frames.zip:
-	curl http://isis-data.science.uva.nl/alov/alov300++_frames.zip \
-		-o data/alov/frames/alov300++_frames.zip
-
-	tar xvf data/alov/frames/alov300++_frames.zip
-
-	mv imagedata++ data/alov/frames/
+work/.alov_frames_sentinel: 
+	curl http://isis-data.science.uva.nl/alov/alov300++_frames.zip -O 
+	tar xvf alov300++_frames.zip
+	mv imagedata++ data/alov/frames
+	rm -rf alov300++_frames.zip imagedata++
+	touch work/.alov_frames_sentinel
 
 # Bounding Boxes #
-data/alov/bb/alov300++GT_txtFiles.zip:
-	curl http://isis-data.science.uva.nl/alov/alov300++GT_txtFiles.zip \
-		-o data/alov/bb/alov300++GT_txtFiles.zip
+work/.alov_bb_sentinel: 
+	curl http://isis-data.science.uva.nl/alov/alov300++GT_txtFiles.zip -O 
+	unzip alov300++GT_txtFiles.zip
+	find alov300++_rectangleAnnotation_full -type f -name '*.ann' \
+		-exec mv {} data/alov/bb/ \; 
+	rm -rf alov300++GT_txtFiles.zip alov300++_rectangleAnnotation_full
+	touch work/.alov_bb_sentinel
 
-	unzip data/alov/bb/alov300++GT_txtFiles.zip
-
-	mv alov300++_rectangleAnnotation_full/ data/alov/bb/bb
-
-alov: data/alov/frames/alov300++_frames.zip \
-	data/alov/bb/alov300++GT_txtFiles.zip
+work/alov/parsed_bb.csv: work/.alov_bb_sentinel work/.alov_frames_sentinel
+	python code/data_setup/parse_alov_bb.py data/alov/ work/alov/parsed_bb.csv \
+		work/alov/images/
 
 #########################
 # ILSVRC2014 (ImageNet) #
@@ -81,5 +80,6 @@ work/.imagenet_validation_images_sentinel: code/data_setup/download_images.py da
 
 
 imagenet_bb: work/imagenet/parsed_bb.csv 
-data: work/.folder_structure_sentinel imagenet_bb
+alov_bb: work/alov/parsed_bb.csv
+data: work/.folder_structure_sentinel imagenet_bb alov_bb
 imagenet_images: work/.imagenet_training_images_sentinel work/.imagenet_validation_images_sentinel
