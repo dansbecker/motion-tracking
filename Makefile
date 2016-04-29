@@ -62,8 +62,6 @@ work/imagenet/parsed_bb.csv: work/.imagenet_training_bbox_sentinel \
 	python motion_tracker/data_setup/parse_imagenet_bb.py data/imagenet/bb/ \
 		work/imagenet/parsed_bb.csv
 
-# Run after images are downloaded, to filter out those images 
-# that failed to download. 
 work/imagenet/parsed_bb2.csv: work/.imagenet_training_images_sentinel \
 	work/.imagenet_validation_images_sentinel
 	python motion_tracker/data_setup/parse_imagenet_bb2.py \

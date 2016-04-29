@@ -6,6 +6,8 @@ This script will filter out those bounding boxes
 so that the bounding boxes csv is as lightweight as possible. 
 """
 
+import sys
+import os
 import pandas as pd
 
 def parse_imagenet_bb(raw_image_dir, parsed_bb_path):
@@ -33,7 +35,7 @@ def parse_imagenet_bb(raw_image_dir, parsed_bb_path):
     # Assuming the path ends in .csv, just insert a 2 in front 
     # of the .csv extension. 
     out_filepath = parsed_bb_path[:-4] + '2' + '.csv'
-    df.to_csv(out_filepath, index=False)
+    bbox_df.to_csv(out_filepath, index=False)
 
 if __name__ == '__main__': 
     raw_image_dir = sys.argv[1]
