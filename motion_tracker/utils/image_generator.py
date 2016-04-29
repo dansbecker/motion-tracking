@@ -1,8 +1,10 @@
 """A script for building image generators for net modeling."""
 
-from motion_tracker.utils.image_cropping import Coords, crop_and_resize
 import pandas as pd
+import numpy as np
 import cv2
+from image_cropping import Coords, crop_and_resize
+from crop_vis import show_single_stage 
 
 def master_generator(num_video_crops=10, num_image_crops=10, batch_size=50): 
     """Generator yielding a batch of images. 
@@ -102,8 +104,8 @@ def imagenet_generator(num_image_crops):
         img, box = crop_and_resize(raw_img, 
                 img_coords, box_coords, output_width,
                 output_height, random_crop=False)
-        imgs_lst.append(img)
-        boxes_lst.append(box)
+        imgs_lst.append(np.array(img))
+        boxes_lst.append(np.array(box.as_array()))
 
         # Now take the right number of random croppings, and append
         # those before yielding them. 
@@ -112,7 +114,13 @@ def imagenet_generator(num_image_crops):
                     img_coords, box_coords, output_width,
                     output_height, random_crop=True)
 
-            imgs_lst.append(img)
-            boxes_lst.append(box)
+            imgs_lst.append(np.array(img))
+            boxes_lst.append(np.array(box.as_array()))
 
         yield imgs_lst, boxes_lst
+
+if __name__ == '__main__': 
+    mas_gen = master_generator() 
+    imgs, boxes = next(mas_gen)
+    for img, box in zip(imgs[0], boxes[0]): 
+        show_single_stage(img, box)
