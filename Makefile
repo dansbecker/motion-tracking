@@ -81,6 +81,8 @@ work/.imagenet_training_images_sentinel: motion_tracker/data_setup/download_imag
 	# Delete images < 3k. They are a thumbnail saying the image wasn't avail. Save list of those files
 	find data/imagenet/images -type f -size -3k | cut -d / -f 4 > work/deleted_files_less_than_3k.txt
 	find data/imagenet/images -type f -size -3k -delete
+	python motion_tracker/data_setup/move_bad_images.py \
+		"data/imagenet/images data/bad_images/imagenet" 
 	touch work/.imagenet_training_images_sentinel
 
 work/.imagenet_validation_images_sentinel: motion_tracker/data_setup/download_images.py data/fall11_imagenet_urls.txt
