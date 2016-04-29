@@ -14,8 +14,8 @@ def parse_imagenet_bb(raw_image_dir, parsed_bb_path):
     Data captured corresponds to xml files obtained from ImageNet.
     '''
 
-    # paper says they use .66, but they use search area that 
-    # is twice bounding box. So, 0.5 may be more appropriate.
+    # paper says they use .66, but that creates search areas 
+    # larger than image. So, 0.5 may be more appropriate.
     max_box_frac_of_width =  0.66
     max_box_frac_of_height = 0.66
     images_successfully_downloaded = set(os.listdir(raw_image_dir))

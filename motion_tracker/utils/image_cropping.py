@@ -161,8 +161,9 @@ def get_crop_coords(box_coords, img_coords, random_crop):
     # calc boundary coords of cropped area. Crop_img is twice as big as box_for_crop
     cropped_area_x0 = max(box_for_crop.x_center - box_for_crop.width, 0)
     cropped_area_y0 = max(box_for_crop.y_center - box_for_crop.height, 0)
-    cropped_area_x1 = min(box_for_crop.x_center + box_for_crop.width, img_coords.width)
-    cropped_area_y1 = min(box_for_crop.y_center + box_for_crop.height, img_coords.height)
+    # Subtract off 1 in lines below to offset 0 indexing. 
+    cropped_area_x1 = min(box_for_crop.x_center + box_for_crop.width, img_coords.width - 1 )
+    cropped_area_y1 = min(box_for_crop.y_center + box_for_crop.height, img_coords.height - 1)
     cropped_area_coords = Coords(cropped_area_x0, cropped_area_y0,
                                  cropped_area_x1, cropped_area_y1)
 
@@ -193,47 +194,3 @@ def crop_and_resize(img, img_coords, box_coords, output_width, output_height, ra
                                                output_width, output_height)
     return final_img, final_box_coords
 
-def imagenet_generator(batch_size=50):
-    '''Generator yielding dictionary. Each dictionary is array of data for model
-
-    batch_size: Number of items in list to be returned.
-    '''
-    raw_image_dir = 'data/imagenet/images/'
-    img_metadata = read_bbox_data(raw_image_dir)
-    output_width = 256
-    output_height = 256
-
-    start_img_data = []
-    start_box_data = []
-    next_img_data = []
-    next_box_data = []
-
-    while True:
-        batch_df = img_metadata.sample(batch_size)
-        for _, row in batch_df.iterrows():
-            img = cv2.imread(raw_image_dir + row.filename)
-            box_coords = Coords(row.x0, row.y0, row.x1, row.y1)
-            yield img, box_coords
-        '''
-        for _, row in batch_df.iterrows():
-            try:
-                img = cv2.imread(raw_image_dir + row.filename)
-                img_coords = Coords(0, 0, row.width, row.height)
-                box_coords = Coords(row.xmin, row.ymin, row.xmax, row.ymax)
-                start_img, start_box = crop_and_resize(img, img_coords, box_coords,
-                                                       output_width, output_height,
-                                                       random_crop=False)
-                next_img, next_box = crop_and_resize(img, img_coords, box_coords,
-                                                   output_width, output_height)
-                start_img_data.append(start_img)
-                start_box_data.append(start_box.as_array())
-                next_img_data.append(next_img)
-                next_box_data.append(next_box.as_array())
-            except:
-                print('Failed on ', row.filename)
-
-        yield {'start_img': np.array(start_img_data),
-               'start_box': np.array(start_box_data),
-               'next_img': np.array(next_img_data),
-               'next_box': np.array(next_box_data)}
-        '''
