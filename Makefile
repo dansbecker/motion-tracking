@@ -32,7 +32,7 @@ work/.alov_bb_sentinel:
 	touch work/.alov_bb_sentinel
 
 work/alov/parsed_bb.csv: work/.alov_bb_sentinel work/.alov_frames_sentinel
-	python code/data_setup/parse_alov_bb.py data/alov/ work/alov/parsed_bb.csv \
+	python motion_tracker/data_setup/parse_alov_bb.py data/alov/ work/alov/parsed_bb.csv \
 		work/alov/images/
 
 #########################

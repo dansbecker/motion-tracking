@@ -24,6 +24,7 @@ def master_generator(num_video_crops=10, num_image_crops=10, batch_size=50):
     # a batch. 
     imagenet = True
     imagenet_gen = imagenet_generator(num_image_crops)
+    alov_gen = alov_generator(num_video_crops)
 
     while True: 
         
@@ -65,7 +66,7 @@ def master_generator(num_video_crops=10, num_image_crops=10, batch_size=50):
         yield out_imgs, out_boxes
             
 def imagenet_generator(num_image_crops):
-    """Generator yielding images and bounding boxes. 
+    """Generator yielding imagenet images and bounding boxes. 
 
     Args: 
     ----
@@ -118,6 +119,30 @@ def imagenet_generator(num_image_crops):
             boxes_lst.append(np.array(box.as_array()))
 
         yield imgs_lst, boxes_lst
+
+def alov_generator(num_video_crops): 
+    """Generator yielding alov pair frames and bounding boxes. 
+
+    The training procedure used takes the two succesive frames, 
+    labeled previous and current. The previous frame is yielded
+    with it's original bounding box, whereas ten random croppings
+    of the the current are taken and yielded. 
+
+    Args: 
+    ----
+        num_video_crops: int
+            Number of random croppings to take of the current frame. 
+
+    Outputs:
+    -------
+        imgs_lst: list of images
+        boxes_lst: list of bounding box coords
+    """
+
+    raw_image_dir = 'work/alov/images/'
+    img_metadata = pd.read_csv('work/alov/parsed_bb.csv')
+    output_width = 256
+    output_height = 256
 
 if __name__ == '__main__': 
     mas_gen = master_generator() 
