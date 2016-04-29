@@ -181,8 +181,8 @@ def read_bbox_data(raw_image_dir, parsed_bb_path='work/imagenet/parsed_bb.csv'):
     max_box_frac_of_height = 0.66
     images_successfully_downloaded = set(os.listdir('data/imagenet/images'))
     bbox_df = (pd.read_csv('work/imagenet/parsed_bb.csv')
-                    .assign(box_height = lambda df: df.ymax - df.ymin,
-                            box_width = lambda df: df.xmax - df.xmin)
+                    .assign(box_height = lambda df: df.y1 - df.y0,
+                            box_width = lambda df: df.x1 - df.x0)
                     .assign(box_frac_of_height = lambda df: df.box_height / df.height,
                             box_frac_of_width = lambda df:  df.box_width / df.width)
                     .query('filename in @images_successfully_downloaded')
@@ -232,6 +232,11 @@ def imagenet_generator(batch_size=50):
     while True:
         batch_df = img_metadata.sample(batch_size)
         for _, row in batch_df.iterrows():
+            img = cv2.imread(raw_image_dir + row.filename)
+            box_coords = Coords(row.x0, row.y0, row.x1, row.y1)
+            yield img, box_coords
+        '''
+        for _, row in batch_df.iterrows():
             try:
                 img = cv2.imread(raw_image_dir + row.filename)
                 img_coords = Coords(0, 0, row.width, row.height)
@@ -252,3 +257,4 @@ def imagenet_generator(batch_size=50):
                'start_box': np.array(start_box_data),
                'next_img': np.array(next_img_data),
                'next_box': np.array(next_box_data)}
+        '''
