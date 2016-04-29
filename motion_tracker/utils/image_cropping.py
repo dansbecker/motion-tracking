@@ -169,27 +169,6 @@ def get_crop_coords(box_coords, img_coords, random_crop):
     box_after_crop = update_box_after_crop(box_coords, cropped_area_coords)
     return cropped_area_coords, box_after_crop
 
-def read_bbox_data(raw_image_dir, parsed_bb_path='work/imagenet/parsed_bb.csv'):
-    '''Return df with data about images and bounding boxes.
-
-    Data captured corresponds to xml files obtained from ImageNet.
-    '''
-
-    # paper says they use .66, but they use search area that is twice bounding box
-    # So, 0.5 may be more appropriate.
-    max_box_frac_of_width =  0.66
-    max_box_frac_of_height = 0.66
-    images_successfully_downloaded = set(os.listdir('data/imagenet/images'))
-    bbox_df = (pd.read_csv('work/imagenet/parsed_bb.csv')
-                    .assign(box_height = lambda df: df.y1 - df.y0,
-                            box_width = lambda df: df.x1 - df.x0)
-                    .assign(box_frac_of_height = lambda df: df.box_height / df.height,
-                            box_frac_of_width = lambda df:  df.box_width / df.width)
-                    .query('filename in @images_successfully_downloaded')
-                    .query('box_frac_of_height < @max_box_frac_of_height')
-                    .query('box_frac_of_width < @max_box_frac_of_width'))
-    return bbox_df
-
 def crop_and_resize(img, img_coords, box_coords, output_width, output_height, random_crop=True):
     '''Return image and the bounding box after a possibly random crop and resize
 

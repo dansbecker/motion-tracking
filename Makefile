@@ -62,13 +62,19 @@ work/imagenet/parsed_bb.csv: work/.imagenet_training_bbox_sentinel \
 	python motion_tracker/data_setup/parse_imagenet_bb.py data/imagenet/bb/ \
 		work/imagenet/parsed_bb.csv
 
+# Run after images are downloaded, to filter out those images 
+# that failed to download. 
+work/imagenet/parsed_bb2.csv: work/.imagenet_training_images_sentinel \
+	work/.imagenet_validation_images_sentinel
+	python motion_tracker/data_setup/parse_imagenet_bb2.py \
+		data/imagenet/images work/imagenet/parsed_bb.csv
+
 data/fall11_imagenet_urls.txt:
 	curl http://image-net.org/imagenet_data/urls/imagenet_fall11_urls.tgz \
 	  -o data/imagenet_fall11_urls.tgz
 	tar xvf data/imagenet_fall11_urls.tgz
 	rm data/imagenet_fall11_urls.tgz
 	mv fall11_urls.txt data/fall11_imagenet_urls.txt
-
 
 work/.imagenet_training_images_sentinel: motion_tracker/data_setup/download_images.py data/fall11_imagenet_urls.txt
 	python motion_tracker/data_setup/download_images.py "training"
@@ -84,4 +90,4 @@ work/.imagenet_validation_images_sentinel: motion_tracker/data_setup/download_im
 imagenet_bb: work/imagenet/parsed_bb.csv
 alov_bb: work/alov/parsed_bb.csv
 data: work/.folder_structure_sentinel imagenet_bb alov_bb
-imagenet_images: work/.imagenet_training_images_sentinel work/.imagenet_validation_images_sentinel
+imagenet_images: work/.imagenet_training_images_sentinel work/.imagenet_validation_images_sentinel work/imagenet/parsed_bb2.csv
