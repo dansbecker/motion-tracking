@@ -161,7 +161,7 @@ def get_crop_coords(box_coords, img_coords, random_crop):
     # calc boundary coords of cropped area. Crop_img is twice as big as box_for_crop
     cropped_area_x0 = max(box_for_crop.x_center - box_for_crop.width, 0)
     cropped_area_y0 = max(box_for_crop.y_center - box_for_crop.height, 0)
-    # Subtract off 1 in lines below to offset 0 indexing. 
+    # Subtract off 1 in lines below to offset 0 indexing.
     cropped_area_x1 = min(box_for_crop.x_center + box_for_crop.width, img_coords.width - 1 )
     cropped_area_y1 = min(box_for_crop.y_center + box_for_crop.height, img_coords.height - 1)
     cropped_area_coords = Coords(cropped_area_x0, cropped_area_y0,
@@ -193,4 +193,3 @@ def crop_and_resize(img, img_coords, box_coords, output_width, output_height, ra
     final_box_coords = update_box_after_resize(box_after_crop, crop_coords,
                                                output_width, output_height)
     return final_img, final_box_coords
-
