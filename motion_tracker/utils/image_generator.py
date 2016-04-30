@@ -66,8 +66,9 @@ def imagenet_generator(crops_per_image, batch_size=50,
     output_fields = ['start_img', 'start_box', 'end_img', 'end_box']
 
     while True:
-        my_output = {field: np.zeros(shape = [0, output_width, output_height])}
-        while my_output[start_imgs].shape[0] < batch_size:
+        my_output = {field: np.zeros(shape = [0, output_width, output_height])
+                        for field in output_fields}
+        while my_output['start_img'].shape[0] < batch_size:
             img_row = img_metadata.sample(1)
             raw_img = cv2.imread(raw_image_dir + img_row.filename.values[0])
             img_coords = Coords(0, 0, img_row.width, img_row.height)
