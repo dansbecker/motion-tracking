@@ -1,7 +1,7 @@
 import cv2
 from image_cropping import Coords, crop_and_resize
 
-def show_img(window_name, img, msec_to_show_for=4500):
+def show_img(window_name, img, msec_to_show_for=1500):
     '''Display an image on the screen for fixed length of milliseconds'''
 
     cv2.imshow(window_name, img)
@@ -42,17 +42,16 @@ def show_stages_of_random_crop(img, box_coords, output_width=256, output_height=
     add_box(final_img, box_coords)
     show_img("Random Crop", final_img)
 
-def show_single_stage(img, box_coords, title="Happy Dance Image"): 
+def show_single_stage(img, box_coords, title="Happy Dance Image"):
     """Show an image with its surrounding bounding box
 
-    Args: 
+    Args:
     ----
         img: np.ndarray
         box_coords: np.ndarray
     """
-    
-    bb_coords = Coords(box_coords[0], box_coords[1], 
-                box_coords[2], box_coords[3])
+
+    bb_coords = Coords(box_coords[0], box_coords[1],
+                       box_coords[2], box_coords[3])
     img_w_bb = add_box(img, bb_coords)
     show_img(title, img_w_bb)
-
