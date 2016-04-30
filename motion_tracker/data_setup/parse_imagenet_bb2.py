@@ -1,4 +1,4 @@
-"""A short script for futher filtering the alov bounding boxes.
+"""A short script for futher filtering the imagenet bounding boxes.
 
 The original imagenet bounding boxes csv contains 
 bounding boxes for images that failed during download.

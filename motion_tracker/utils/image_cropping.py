@@ -79,7 +79,8 @@ def update_box_after_crop(box_coords, crop_coords):
     new_box_y0 = max(box_coords.y0 - crop_coords.y0, 0)
     new_box_x1 = min(box_coords.x1 - crop_coords.x0, crop_coords.x1)
     new_box_y1 = min(box_coords.y1 - crop_coords.y0, crop_coords.y1)
-    return Coords(new_box_x0, new_box_y0, new_box_x1, new_box_y1)
+    coord= Coords(new_box_x0, new_box_y0, new_box_x1, new_box_y1)
+    return coord
 
 def update_box_after_resize(box_coords, img_coords, output_img_width=256, output_img_height=256):
     '''Calculate coords of correct bounding box to reflect resizing
@@ -158,6 +159,7 @@ def get_crop_coords(box_coords, img_coords, random_crop):
     else:
         box_for_crop = box_coords
 
+
     # calc boundary coords of cropped area. Crop_img is twice as big as box_for_crop
     cropped_area_x0 = max(box_for_crop.x_center - box_for_crop.width, 0)
     cropped_area_y0 = max(box_for_crop.y_center - box_for_crop.height, 0)
@@ -166,6 +168,7 @@ def get_crop_coords(box_coords, img_coords, random_crop):
     cropped_area_y1 = min(box_for_crop.y_center + box_for_crop.height, img_coords.height - 1)
     cropped_area_coords = Coords(cropped_area_x0, cropped_area_y0,
                                  cropped_area_x1, cropped_area_y1)
+
 
     box_after_crop = update_box_after_crop(box_coords, cropped_area_coords)
     return cropped_area_coords, box_after_crop
@@ -184,7 +187,6 @@ def crop_and_resize(img, img_coords, box_coords, output_width, output_height, ra
                  If False, create crop based on true bounding box
                  Cropped area is twice as large (and centered) on box either way
     '''
-
     crop_coords, box_after_crop = get_crop_coords(box_coords, img_coords, random_crop)
     cropped_img = img[crop_coords.y0:crop_coords.y1,
                       crop_coords.x0:crop_coords.x1]

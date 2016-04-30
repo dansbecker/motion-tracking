@@ -137,11 +137,19 @@ if __name__ == '__main__':
     cp_files(filepaths_df)
 
     # Rename to match the project terminology and what's used with imagenet. 
-    filepaths_df.rename(columns={'x1':'x0', 'x3':'x1', 'y1':'y0', 'y3':'y1'}, inplace=True)
+    filepaths_df['x_max'] = np.max(filepaths_df[['x1', 'x2', 'x3', 'x4']], axis=1)
+    filepaths_df['x_min'] = np.min(filepaths_df[['x1', 'x2', 'x3', 'x4']], axis=1)
+    filepaths_df['y_max'] = np.max(filepaths_df[['y1', 'y2', 'y3', 'y4']], axis=1)
+    filepaths_df['y_min'] = np.min(filepaths_df[['y1', 'y2', 'y3', 'y4']], axis=1)
+    filepaths_df.drop(['x1', 'x2', 'x3', 'x4', 'y1','y2', 'y3', 'y4'], axis=1, inplace=True)
+    filepaths_df.rename(columns={'x_min':'x0', 'x_max':'x1', 'y_min':'y0', 'y_max':'y1'}, inplace=True)
     save_df = calc_frame_pairs(filepaths_df)
     # Only keep what we'll need for the generator. 
     keep_cols = ['x0_start', 'y0_start', 'x1_start', 'y1_start', 
             'jpg_filename_start', 'x0_end', 'x1_end', 'y0_end', 'y1_end', 
             'jpg_filename_end']
     save_df = save_df[keep_cols]
+
+    save_df.rename(columns={'jpg_filename_start': 'filename_start', 
+                            'jpg_filename_end': 'filename_end'}, inplace=True)
     save_df.to_csv(output_filepath, index=False)
