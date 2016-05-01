@@ -1,5 +1,5 @@
 import cv2
-from image_cropping import Coords, crop_and_resize
+from motion_tracker.utils.image_cropping import Coords, crop_and_resize
 
 def show_img(window_name, img, msec_to_show_for=1500):
     '''Display an image on the screen for fixed length of milliseconds'''

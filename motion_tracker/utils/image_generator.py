@@ -22,7 +22,7 @@ def master_generator(crops_per_image = 10, batch_size=50,
 
     """
 
-    generators_to_draw_from = [# imagenet_generator(crops_per_image)] #,
+    generators_to_draw_from = [imagenet_generator(crops_per_image), 
                                alov_generator(crops_per_image)]
 
     empty_img_accumulator = np.zeros([0, output_width, output_height, 3]).astype('uint8')
@@ -38,10 +38,11 @@ def master_generator(crops_per_image = 10, batch_size=50,
         while my_output['start_img'].shape[0] < batch_size:
             for img_source in generators_to_draw_from:
                 subsource_output = next(img_source)
-            for field in my_output:
-                # Add outputs from subsource
-                my_output[field] = np.concatenate([my_output[field],
-                                                   subsource_output[field]])
+                for field in my_output:
+                    # Add outputs from subsource
+                    my_output[field] = np.concatenate([my_output[field],
+                                                       subsource_output[field]])
+            
         # Limit output arrays from being larger than batch_size
         for field in my_output:
             my_output[field] = my_output[field][:batch_size]
@@ -127,7 +128,7 @@ def alov_generator(crops_per_image=10, batch_size=50,
             Number of random crops of the current frame to take.
             Corresponds to both k3 and k4 in the paper, with a value of 10.
         batch_size: int
-            Number of items in list to be returned.
+            Number of items in list to be returned. 
         output_width: int
             Width in pixels of output images for start and ending image
         output_height: int
@@ -149,8 +150,6 @@ def alov_generator(crops_per_image=10, batch_size=50,
         while my_output['start_img'].shape[0] < batch_size:
             img_row = img_metadata.sample(1)
 
-            print(img_row.filename_start.values[0], img_row.filename_end.values[0])
-            
             start_img0 = cv2.imread(raw_image_dir + img_row.filename_start.values[0])
             end_img0 = cv2.imread(raw_image_dir + img_row.filename_end.values[0])
 
@@ -187,8 +186,8 @@ def alov_generator(crops_per_image=10, batch_size=50,
         yield my_output
 
 if __name__ == '__main__':
-    my_gen = master_generator(crops_per_image=2, batch_size=50)
+    my_gen = master_generator(crops_per_image=10, batch_size=50)
     batch = next(my_gen)
-    for i in range(20):
+    for i in range(batch['start_img'].shape[0]):
         show_single_stage(batch['start_img'][i], batch['start_box'][i])
         show_single_stage(batch['end_img'][i], batch['end_box'][i])
