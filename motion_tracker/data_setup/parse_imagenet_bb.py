@@ -12,16 +12,13 @@ def parse_file(bbox_dir, filename):
     Args:
     ----
         bbox_dir: str
-            Holds the directory path to the XML file.
         filename: str
-            Holds the name of the XML file. To be attached to the
-            `bbox_dir` to be read in and parsed.
 
     Output:
     ------
         output_lst: list of lists
-            Holds lists of the values parsed from an XML file.
     """
+
     tree = ET.parse(bbox_dir + filename)
     root = tree.getroot()
 
@@ -97,7 +94,7 @@ if __name__ == '__main__':
     all_bboxes = (parse_file(bbox_dir, filename) for filename in bbox_xml_filenames)
     end_lst = list(itertools.chain(*all_bboxes))
 
-    cols = ['filename', 'width', 'height', 'name', 'subcategory', 'xmin', 'xmax',
-            'ymin', 'ymax']
+    cols = ['filename', 'width', 'height', 'name', 
+            'subcategory', 'x0', 'x1', 'y0', 'y1']
     output_df = pd.DataFrame(data=end_lst, columns=cols)
     output_df.to_csv(output_filepath, index=False)
