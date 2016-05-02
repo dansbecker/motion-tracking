@@ -1,8 +1,19 @@
 import pandas as pd
 import numpy as np
 import cv2
-from image_cropping import Coords, crop_and_resize
-from crop_vis import show_single_stage
+from motion_tracker.utils.image_cropping import Coords, crop_and_resize
+from motion_tracker.utils.crop_vis import show_single_stage
+
+def get_X_y_containers(output_width=256, output_height=256):
+    empty_img_accumulator = np.zeros([0, output_width, output_height, 3]).astype('uint8')
+    empty_box_accumulator = np.zeros([0, 4]).astype('uint16')
+    empty_X = {'start_img': empty_img_accumulator,
+               'start_box': empty_box_accumulator,
+               'end_img': empty_img_accumulator}
+    empty_y = {'end_box': empty_box_accumulator}
+    return empty_X, empty_y
+
+
 
 def master_generator(crops_per_image = 10, batch_size=50,
                      output_width = 256, output_height = 256):
@@ -22,31 +33,23 @@ def master_generator(crops_per_image = 10, batch_size=50,
 
     """
 
-    generators_to_draw_from = [imagenet_generator(crops_per_image), 
+    generators_to_draw_from = [imagenet_generator(crops_per_image),
                                alov_generator(crops_per_image)]
 
-    empty_img_accumulator = np.zeros([0, output_width, output_height, 3]).astype('uint8')
-    empty_box_accumulator = np.zeros([0, 4])
-
     while True:
-        my_output = {'start_img': empty_img_accumulator,
-                     'start_box': empty_box_accumulator,
-                     'end_img': empty_img_accumulator,
-                     'end_box': empty_box_accumulator}
+        X, y = get_X_y_containers(output_width, output_height)
 
-        # Check count of images already in batch is less than batch_size.
-        while my_output['start_img'].shape[0] < batch_size:
+        # Check we haven't hit batch size yet
+        while X['start_img'].shape[0] < batch_size:
             for img_source in generators_to_draw_from:
-                subsource_output = next(img_source)
-                for field in my_output:
-                    # Add outputs from subsource
-                    my_output[field] = np.concatenate([my_output[field],
-                                                       subsource_output[field]])
-            
-        # Limit output arrays from being larger than batch_size
-        for field in my_output:
-            my_output[field] = my_output[field][:batch_size]
-        yield my_output
+                subsource_X, subsource_y = next(img_source)
+                for field in X:
+                    X[field] = np.concatenate([X[field], subsource_X[field]])
+                    # Limit output array size if larger than batch
+                    X[field] = X[field][:batch_size]
+                y['end_box'] = np.concatenate([y['end_box'], subsource_y['end_box']])
+                y['end_box'] = y['end_box'][:batch_size]
+        yield X, y
 
 def set_array_dims(img, box):
     ''' Adds an additional axis of length 1 to start of imgs and boxes.
@@ -80,14 +83,9 @@ def imagenet_generator(crops_per_image=10, batch_size=50,
     raw_image_dir = 'data/imagenet/images/'
     img_metadata = pd.read_csv('work/imagenet/parsed_bb2.csv')
 
-    empty_img_accumulator = np.zeros([0, output_width, output_height, 3]).astype('uint8')
-    empty_box_accumulator = np.zeros([0, 4])
     while True:
-        my_output = {'start_img': empty_img_accumulator,
-                     'start_box': empty_box_accumulator,
-                     'end_img': empty_img_accumulator,
-                     'end_box': empty_box_accumulator}
-        while my_output['start_img'].shape[0] < batch_size:
+        X, y = get_X_y_containers(output_width, output_height)
+        while X['start_img'].shape[0] < batch_size:
             img_row = img_metadata.sample(1)
             raw_img = cv2.imread(raw_image_dir + img_row.filename.values[0])
             img_coords = Coords(0, 0, img_row.width, img_row.height)
@@ -103,19 +101,16 @@ def imagenet_generator(crops_per_image=10, batch_size=50,
                                                    output_width, output_height,
                                                    random_crop=True)
                 end_img, end_box = set_array_dims(end_img, end_box)
-                my_output['start_img'] = np.concatenate([my_output['start_img'],
-                                                         start_img])
-                my_output['start_box'] = np.concatenate([my_output['start_box'],
-                                                         start_box])
-                my_output['end_img'] = np.concatenate([my_output['end_img'],
-                                                       end_img])
-                my_output['end_box'] = np.concatenate([my_output['end_box'],
-                                                       end_box])
+                X['start_img'] = np.concatenate([X['start_img'], start_img])
+                X['start_box'] = np.concatenate([X['start_box'], start_box])
+                X['end_img'] = np.concatenate([X['end_img'], end_img])
+                y['end_box'] = np.concatenate([y['end_box'], end_box])
 
-        # Limit output arrays from being larger than batch_size
-        for field in my_output:
-            my_output[field] = my_output[field][:batch_size]
-        yield my_output
+            # Limit output array sizes if larger than batch
+            for field in X:
+                X[field] = X[field][:batch_size]
+            y['end_box'] = y['end_box'][:batch_size]
+        yield X, y
 
 
 def alov_generator(crops_per_image=10, batch_size=50,
@@ -128,7 +123,7 @@ def alov_generator(crops_per_image=10, batch_size=50,
             Number of random crops of the current frame to take.
             Corresponds to both k3 and k4 in the paper, with a value of 10.
         batch_size: int
-            Number of items in list to be returned. 
+            Number of items in list to be returned.
         output_width: int
             Width in pixels of output images for start and ending image
         output_height: int
@@ -139,27 +134,22 @@ def alov_generator(crops_per_image=10, batch_size=50,
     raw_image_dir = 'work/alov/images/'
     img_metadata = pd.read_csv('work/alov/parsed_bb.csv')
 
-    empty_img_accumulator = np.zeros([0, output_width, output_height, 3]).astype('uint8')
-    empty_box_accumulator = np.zeros([0, 4])
-
     while True:
-        my_output = {'start_img': empty_img_accumulator,
-                     'start_box': empty_box_accumulator,
-                     'end_img': empty_img_accumulator,
-                     'end_box': empty_box_accumulator}
-        while my_output['start_img'].shape[0] < batch_size:
+        X, y = get_X_y_containers(output_width, output_height)
+
+        while X['start_img'].shape[0] < batch_size:
             img_row = img_metadata.sample(1)
 
             start_img0 = cv2.imread(raw_image_dir + img_row.filename_start.values[0])
             end_img0 = cv2.imread(raw_image_dir + img_row.filename_end.values[0])
 
-            
+
             start_img_coords = Coords(0, 0, start_img0.shape[1], start_img0.shape[0])
             end_img_coords = Coords(0, 0, end_img0.shape[1], end_img0.shape[0])
-            start_box_coords = Coords(img_row.x0_start, img_row.y0_start, 
+            start_box_coords = Coords(img_row.x0_start, img_row.y0_start,
                                       img_row.x1_start, img_row.y1_start)
 
-            end_box_coords = Coords(img_row.x0_end, img_row.y0_end, 
+            end_box_coords = Coords(img_row.x0_end, img_row.y0_end,
                                     img_row.x1_end, img_row.y1_end)
             start_img, start_box = crop_and_resize(start_img0, start_img_coords,
                                                    start_box_coords, output_width,
@@ -171,19 +161,16 @@ def alov_generator(crops_per_image=10, batch_size=50,
                                                    end_box_coords, output_width,
                                                    output_height, random_crop=True)
                 end_img, end_box = set_array_dims(end_img, end_box)
-                my_output['start_img'] = np.concatenate([my_output['start_img'],
-                                                         start_img])
-                my_output['start_box'] = np.concatenate([my_output['start_box'],
-                                                         start_box])
-                my_output['end_img'] = np.concatenate([my_output['end_img'],
-                                                       end_img])
-                my_output['end_box'] = np.concatenate([my_output['end_box'],
-                                                       end_box])
+                X['start_img'] = np.concatenate([X['start_img'], start_img])
+                X['start_box'] = np.concatenate([X['start_box'], start_box])
+                X['end_img'] = np.concatenate([X['end_img'], end_img])
+                y['end_box'] = np.concatenate([y['end_box'], end_box])
 
-        # Limit output arrays from being larger than batch_size
-        for field in my_output:
-            my_output[field] = my_output[field][:batch_size]
-        yield my_output
+            # Limit output array sizes if larger than batch
+            for field in X:
+                X[field] = X[field][:batch_size]
+            y['end_box'] = y['end_box'][:batch_size]
+        yield X, y
 
 if __name__ == '__main__':
     my_gen = master_generator(crops_per_image=10, batch_size=50)
