@@ -33,8 +33,10 @@ def master_generator(crops_per_image = 10, batch_size=50,
 
     """
 
-    generators_to_draw_from = [imagenet_generator(crops_per_image),
-                               alov_generator(crops_per_image)]
+    generators_to_draw_from = [imagenet_generator(batch_size=crops_per_image, 
+                                                  crops_per_image=crops_per_image), 
+                               alov_generator(batch_size=crops_per_image, 
+                                              crops_per_image=crops_per_image)]
 
     while True:
         X, y = get_X_y_containers(output_width, output_height)
@@ -173,8 +175,8 @@ def alov_generator(crops_per_image=10, batch_size=50,
         yield X, y
 
 if __name__ == '__main__':
-    my_gen = master_generator(crops_per_image=10, batch_size=50)
-    batch = next(my_gen)
-    for i in range(batch['start_img'].shape[0]):
-        show_single_stage(batch['start_img'][i], batch['start_box'][i])
-        show_single_stage(batch['end_img'][i], batch['end_box'][i])
+    my_gen = master_generator(crops_per_image=2, batch_size=50)
+    X, y = next(my_gen)
+    for i in range(50):
+        show_single_stage(X['start_img'][i], X['start_box'][i])
+        show_single_stage(X['end_img'][i], y['end_box'][i])
