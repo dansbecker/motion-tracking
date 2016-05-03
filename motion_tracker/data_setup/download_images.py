@@ -62,9 +62,8 @@ class ImageDownloader(object):
 
 
 if __name__ == "__main__":
-    dataset_id = sys.argv[1]
-    bbox_dir = 'data/ILSVRC/bb/' + dataset_id
-    images_dir = 'data/ILSVRC/images/' + dataset_id
+    bbox_dir = 'data/imagenet/bb/'
+    images_dir = 'data/imagenet/images/'
     xml_files_by_dir = (i[2] for i in os.walk(bbox_dir))
     bbox_xml_files = itertools.chain(*xml_files_by_dir)
     imgs_with_bbox_xml = set([f.replace('.xml', '') for f in bbox_xml_files])
