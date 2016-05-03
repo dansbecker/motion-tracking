@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import cv2
 from motion_tracker.utils.image_cropping import Coords, crop_and_resize
-from motion_tracker.utils.crop_vis import show_single_stage
+from motion_tracker.utils.crop_vis import show_img
 
 def get_X_y_containers(output_width=256, output_height=256):
     empty_img_accumulator = np.zeros([0, output_width, output_height, 3]).astype('uint8')
@@ -177,6 +177,6 @@ def alov_generator(crops_per_image=10, batch_size=50,
 if __name__ == '__main__':
     my_gen = master_generator(crops_per_image=2, batch_size=50)
     X, y = next(my_gen)
-    for i in range(50):
-        show_single_stage(X['start_img'][i], X['start_box'][i])
-        show_single_stage(X['end_img'][i], y['end_box'][i])
+    for i in range(10):
+        show_img(X['start_img'][i], X['start_box'][i])
+        show_img(X['end_img'][i], y['end_box'][i])
