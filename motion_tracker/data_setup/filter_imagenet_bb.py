@@ -9,7 +9,7 @@ import sys
 import os
 import pandas as pd
 
-def parse_imagenet_bb(raw_image_dir, parsed_bb_path):
+def parse_imagenet_bb(raw_image_dir, in_bb_path, out_bb_path):
     '''Return df with data about images and bounding boxes.
 
     Data captured corresponds to xml files obtained from ImageNet.
@@ -20,7 +20,7 @@ def parse_imagenet_bb(raw_image_dir, parsed_bb_path):
     max_box_frac_of_width =  0.66
     max_box_frac_of_height = 0.66
     images_successfully_downloaded = set(os.listdir(raw_image_dir))
-    bbox_df = (pd.read_csv(parsed_bb_path)
+    bbox_df = (pd.read_csv(in_bb_path)
                     .assign(box_height = lambda df: df.y1 - df.y0,
                             box_width = lambda df: df.x1 - df.x0)
                     .assign(box_frac_of_height = lambda df: 
@@ -33,11 +33,11 @@ def parse_imagenet_bb(raw_image_dir, parsed_bb_path):
 
     # Assuming the path ends in .csv, just insert a 2 in front 
     # of the .csv extension. 
-    out_filepath = parsed_bb_path[:-4] + '2' + '.csv'
-    bbox_df.to_csv(out_filepath, index=False)
+    bbox_df.to_csv(out_bb_path, index=False)
 
 if __name__ == '__main__': 
     raw_image_dir = sys.argv[1]
-    parsed_bb_path = sys.argv[2]
+    in_bb_path = sys.argv[2]
+    out_bb_path = sys.argv[3]
 
-    parse_imagenet_bb(raw_image_dir, parsed_bb_path)
+    parse_imagenet_bb(raw_image_dir, in_bb_path, out_bb_path)
