@@ -47,7 +47,7 @@ def add_filepaths(parsed_df, input_dir, output_dir):
     parsed_df['vid_num'] = (parsed_df['frame'].astype(str)
                                .apply(lambda frame: frame.zfill(8)))
     parsed_df['filename'] = (parsed_df['filename']
-                                .apply(lambda filename: 
+                                .apply(lambda filename:
                                     filename.replace('.ann', '')))
 
     # Need to replace the filename ext. in the DataFrame with `.jpg` and provide
@@ -58,7 +58,7 @@ def add_filepaths(parsed_df, input_dir, output_dir):
         '_' + parsed_df['vid_num'] + '.jpg')
     # To be used as the full path in the image generator.
     parsed_df['jpg_filename'] = (parsed_df['output_filepath']
-                                    .apply(lambda filepath: 
+                                    .apply(lambda filepath:
                                         filepath.split('/')[3]))
 
     return parsed_df
@@ -107,9 +107,9 @@ def fix_box_coords(filepaths_df):
     filepaths_df['y_max'] = np.max(Ys, axis=1)
     filepaths_df['y_min'] = np.min(Ys, axis=1)
 
-    filepaths_df.drop(['x1', 'x2', 'x3', 'x4', 'y1', 'y2', 'y3', 'y4'], 
+    filepaths_df.drop(['x1', 'x2', 'x3', 'x4', 'y1', 'y2', 'y3', 'y4'],
             axis=1, inplace=True)
-    filepaths_df.rename(columns={'x_min': 'x0', 'x_max': 'x1', 
+    filepaths_df.rename(columns={'x_min': 'x0', 'x_max': 'x1',
             'y_min': 'y0', 'y_max': 'y1'}, inplace=True)
 
     return filepaths_df
@@ -122,7 +122,7 @@ def calc_frame_pairs(frames_df):
     frames in the same row in the DataFrame. This will make it easy for our image
     generator to easily cycle through pairs. We'll accomplish this by taking the
     `frames_df`, lopping off the last row, placing in a filler row, and merging it
-    back onto the original `frames_df`. The rest will be cleanup. 
+    back onto the original `frames_df`. The rest will be cleanup.
 
     Args:
     ----

@@ -16,8 +16,17 @@ def get_X_y_containers(output_width=256, output_height=256):
 def rough_normalization(img):
     return (img-100) / 60
 
+def tf_th_dim_switch(img_array):
+    """Switches between 'tf' and 'th' dim ordering. Assumes img num is in axis 0
+
+    tf ordering has channel in axis 3, and th ordering has channel in axis 1
+    """
+    return img_array.swapaxes(1,3)
+
+
 def master_generator(crops_per_image = 10, batch_size=50,
-                     output_width = 256, output_height = 256):
+                     output_width = 256, output_height = 256,
+                     desired_dim_ordering='th'):
     """Generator yielding dictionary of image and bounding boxes.
 
     Args:
@@ -59,6 +68,9 @@ def master_generator(crops_per_image = 10, batch_size=50,
         # yield [X['start_img'], X['start_box'], X['end_img']], y
         y = y['end_box']
         # X['start_box'] = y
+        if desired_dim_ordering == 'th': # do swap because data comes in 'tf' format
+            X['start_img'] = tf_th_dim_switch(X['start_img'])
+            X['end_img'] = tf_th_dim_switch(X['end_img'])
         yield [X['start_img'], X['start_box'], X['end_img']], {'x_0': y[:, 0]/output_width,
                                                                'y_0': y[:, 1]/output_height,
                                                                'x_1': y[:, 2]/output_width,
@@ -76,7 +88,8 @@ def set_array_dims(img, box):
     return out_img, out_box
 
 def imagenet_generator(crops_per_image=10, batch_size=50,
-                       output_width = 256, output_height = 256):
+                       output_width = 256, output_height = 256,
+                       desired_dim_ordering='tf'):
     """Generator yielding dictionary of image and bounding boxes.
 
     Args:
@@ -136,7 +149,8 @@ def imagenet_generator(crops_per_image=10, batch_size=50,
 
 
 def alov_generator(crops_per_image=10, batch_size=50,
-                       output_width = 256, output_height = 256):
+                       output_width = 256, output_height = 256,
+                       desired_dim_ordering='tf'):
     """Generator yielding dictionary of image and bounding boxes.
 
     Args:
