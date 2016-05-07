@@ -43,6 +43,7 @@ def master_generator(crops_per_image = 10, batch_size=50,
 
     """
 
+
     generators_to_draw_from = [imagenet_generator(batch_size=crops_per_image,
                                                   crops_per_image=crops_per_image,
                                                   output_width=output_width,
@@ -68,6 +69,7 @@ def master_generator(crops_per_image = 10, batch_size=50,
         # yield [X['start_img'], X['start_box'], X['end_img']], y
         y = y['end_box']
         # X['start_box'] = y
+
         if desired_dim_ordering == 'th': # do swap because data comes in 'tf' format
             X['start_img'] = tf_th_dim_switch(X['start_img'])
             X['end_img'] = tf_th_dim_switch(X['end_img'])
@@ -139,13 +141,7 @@ def imagenet_generator(crops_per_image=10, batch_size=50,
                 y['end_box'] = y['end_box'][:batch_size]
             except:
                 pass
-        # y = y['end_box']
         yield X, y
-        # yield [X['start_img'], X['start_box'], X['end_img']], {'x_0': y[:, 0]/output_width,
-                                                               # 'y_0': y[:, 1]/output_height,
-                                                            # 'x_1': y[:, 2]/output_width,
-                                                               # 'y_1': y[:, 3]/output_height}
-        # yield [X['start_img'], X['start_box'], X['end_img']], y
 
 
 def alov_generator(crops_per_image=10, batch_size=50,
@@ -210,7 +206,6 @@ def alov_generator(crops_per_image=10, batch_size=50,
             except:
                 pass
             yield X, y
-        # yield [X['start_img'], X['start_box'], X['end_img']], y
 
 if __name__ == '__main__':
     my_gen = master_generator(crops_per_image=2, batch_size=50)

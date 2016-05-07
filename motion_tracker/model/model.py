@@ -6,23 +6,27 @@ from motion_tracker.utils.image_generator import imagenet_generator, master_gene
 from keras import backend as K
 from time import sleep
 
-img_edge_size = 100
-backend_str = 'th'
+img_edge_size = 128
+backend_id = 'th'
 
-if backend_str == 'th':
+if backend_id == 'th':
     img_shape = (3, img_edge_size, img_edge_size)
-if backend_str == 'tf':
+if backend_id == 'tf':
     img_shape = (3, img_edge_size, img_edge_size)
 
 generic_img = Input(shape=img_shape)
-generic_layer_1 = Convolution2D(16, 3, 3, activation='relu', border_mode='valid',
-                                dim_ordering=backend_str)(generic_img)
-generic_layer_2 = Convolution2D(16, 3, 3, activation='relu', border_mode='valid',
-                                dim_ordering=backend_str)(generic_layer_1)
-generic_layer_3 = Convolution2D(8, 3, 3, activation='relu', border_mode='valid',
-                                dim_ordering=backend_str)(generic_layer_2)
-generic_layer_4 = MaxPooling2D(pool_size=(2,2), dim_ordering=backend_str)(generic_layer_3)
-out_from_reusable_model = Flatten()(generic_layer_4)
+layer = Convolution2D(30, 5, 5, activation='relu', border_mode='same',
+                                dim_ordering=backend_id)(generic_img)
+layer = Convolution2D(30, 4, 4, activation='relu', border_mode='same',
+                                dim_ordering=backend_id)(layer)
+layer = Convolution2D(16, 3, 3, activation='relu', border_mode='valid',
+                                dim_ordering=backend_id)(layer)
+layer = Convolution2D(16, 3, 3, activation='relu', border_mode='valid',
+                                dim_ordering=backend_id)(layer)
+layer = Convolution2D(12, 3, 3, activation='relu', border_mode='valid',
+                                dim_ordering=backend_id)(layer)
+layer = MaxPooling2D(pool_size=(2,2), dim_ordering=backend_id)(layer)
+out_from_reusable_model = Flatten()(layer)
 reusable_img_featurizer = Model(generic_img, out_from_reusable_model)
 
 start_img = Input(shape=img_shape, name='start_img')
@@ -54,13 +58,14 @@ my_model.compile(loss ={'x_0': 'mean_absolute_error',
                                       'x_1': 0.25, 'y_1': 0.25},
                 optimizer='adam')
 
+print(my_model.summary())
 my_gen = master_generator(output_width = img_edge_size,
 						  output_height = img_edge_size,
                           crops_per_image=10,
-                          batch_size = 30,
-                          desired_dim_ordering = backend_str)
+                          batch_size = 20,
+                          desired_dim_ordering = backend_id)
 print('Fitting')
-my_model.fit_generator(my_gen, samples_per_epoch=2000, nb_epoch=7,
+my_model.fit_generator(my_gen, samples_per_epoch=1000, nb_epoch=10,
 					   max_q_size=5, verbose=1)
 sleep(1)
 a = next(my_gen)
@@ -68,3 +73,5 @@ preds = my_model.predict(a[0])
 actuals = a[1]
 print([i.mean() for i in preds])
 print([i.std() for i in preds])
+
+#--- made samples per epoch big to run over the weekend. Change it back
