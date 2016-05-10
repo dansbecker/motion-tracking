@@ -27,25 +27,28 @@ def show_stages_of_random_crop(img, box_coords, output_width=256, output_height=
                                                   output_width, output_height)
     show_img(final_img, final_box_coords.as_array())
 
-def show_img(img, box_coords=None, window_name="Happy Dance Image", 
+def show_img(img, boxes=None, window_name="Happy Dance Image", 
                       msec_to_show_for=1500):
     """Show an image, potentially with surrounding bounding boxes
 
     Args:
     ----
         img: np.ndarray
-        box_coords: np.ndarray
+        boxes (optional): dct of bounding boxes where the keys hold the name (actual
+            or predicted) and the values the coordinates of the boxes
         window_name (optional): str
-        msec_to_show_for (optioanl): int
+        msec_to_show_for (optional): int
     """
     
     img_copy = img.copy() # Any drawing is inplace. Draw on copy to protect original.
-    if box_coords is not None:
-        cv2.rectangle(img_copy,
-                      pt1=(box_coords[0], box_coords[1]),
-                      pt2=(box_coords[2], box_coords[3]),
-                      color=(255, 100, 0),
-                      thickness=2)
+    if boxes is not None:
+        color_dct = {'actual': (125, 255, 0), 'predicted': (0, 25, 255)}
+        for box_type, box_coords  in boxes.items(): 
+            cv2.rectangle(img_copy,
+                          pt1=(box_coords[0], box_coords[1]),
+                          pt2=(box_coords[2], box_coords[3]),
+                          color=color_dct[box_type], 
+                          thickness=2)
 
     cv2.imshow(window_name, img_copy)
     cv2.waitKey(msec_to_show_for)
