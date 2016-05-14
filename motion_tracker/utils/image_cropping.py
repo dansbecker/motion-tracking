@@ -23,6 +23,9 @@ class Coords(object):
         return(", ".join([str(i) for i in (self.x0, self.y0, self.x1, self.y1)]))
     def as_array(self):
         return np.array([self.x0, self.y0, self.x1, self.y1])
+    def as_dict(self):
+        return {'x0': [self.x0], 'y0': [self.y0],
+                'x1': [self.x1], 'y1': [self.y1]}
 
 def get_cropping_params(bb_loc_laplace_b_param = 0.2,
                     bb_size_laplace_b_param = 0.06,
