@@ -123,6 +123,7 @@ def get_random_box_to_determine_crop(box_coords):
     # constructor, we calculate them explicitly here to find the edges
     # (i.e. to create new box Coords)
     x_shift_frac, y_shift_frac, x_size_change_frac, y_size_change_frac = get_cropping_params()
+
     box_for_crop_x_center = box_coords.x_center + x_shift_frac * box_coords.width
     box_for_crop_y_center = box_coords.y_center + y_shift_frac * box_coords.height
     box_for_crop_width = box_coords.width * x_size_change_frac
@@ -169,7 +170,6 @@ def get_crop_coords(box_coords, img_coords, random_crop):
     cropped_area_coords = Coords(cropped_area_x0, cropped_area_y0,
                                  cropped_area_x1, cropped_area_y1)
 
-
     box_after_crop = update_box_after_crop(box_coords, cropped_area_coords)
     return cropped_area_coords, box_after_crop
 
@@ -187,9 +187,13 @@ def crop_and_resize(img, img_coords, box_coords, output_width, output_height, ra
                  If False, create crop based on true bounding box
                  Cropped area is twice as large (and centered) on box either way
     '''
-    crop_coords, box_after_crop = get_crop_coords(box_coords, img_coords, random_crop)
-    cropped_img = img[crop_coords.y0:crop_coords.y1,
-                      crop_coords.x0:crop_coords.x1]
+
+    # Placeholder to get into the while loop the first time. 
+    cropped_img = np.zeros((2, 2))
+    while 0 not in cropped_img.shape: 
+        crop_coords, box_after_crop = get_crop_coords(box_coords, img_coords, random_crop)
+        cropped_img = img[crop_coords.y0:crop_coords.y1,
+                          crop_coords.x0:crop_coords.x1]
     box_after_crop = update_box_after_crop(box_coords, crop_coords)
     final_img = cv2.resize(cropped_img, (output_width, output_height))
     final_box_coords = update_box_after_resize(box_after_crop, crop_coords,
