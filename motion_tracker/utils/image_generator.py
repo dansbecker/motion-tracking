@@ -31,15 +31,15 @@ class ImagePairAndBoxGen(object):
         self.output_height = output_height
         self.desired_dim_ordering = desired_dim_ordering
 
-
-    def are_accumulators_full(self):
+    @property
+    def accumulators_full(self):
         return self.X['start_img'].shape[0] >= self.batch_size
 
     def flow(self):
         """The function yielding an iterator."""
         while True:
             self.reset_accumulators()
-            while not self.are_accumulators_full():
+            while not self.accumulators_full:
                 self.add_to_accumulators()
             self.remove_accumulator_overflow()
             self.ensure_dim_ordering()
@@ -49,10 +49,12 @@ class ImagePairAndBoxGen(object):
     def reset_accumulators(self):
         """Empties all contents from previous batch. Sets up for next batch"""
         empty_img_accumulator = np.zeros([0, self.output_width, self.output_height, 3]).astype('uint8')
+        empty_img_mask_accumulator = np.zeros([0, self.output_width, self.output_height, 1]).astype('uint8')
         empty_box_accumulator = np.zeros([0, 4]).astype('uint16')
         empty_digit_accumulator = np.zeros([0]).astype('uint16')
         self.X = {'start_img': empty_img_accumulator,
                   'start_box': empty_box_accumulator,
+                  'start_box_mask': empty_img_mask_accumulator,
                   'end_img': empty_img_accumulator}
         self.y = {'x0': empty_digit_accumulator,
                   'y0': empty_digit_accumulator,
@@ -68,35 +70,39 @@ class ImagePairAndBoxGen(object):
 
     def ensure_dim_ordering(self):
         if self.desired_dim_ordering == 'th': # swap because data comes in 'tf' format
-            self.X['start_img'] = self.X['start_img'].swapaxes(1, 3)
-            self.X['end_img'] = self.X['end_img'].swapaxes(1, 3)
+            imgs_to_flip  = ['start_img', 'end_img', 'start_box_mask']
+            for img in imgs_to_flip:
+                self.X[img] = self.X[img].swapaxes(1,3)
 
-    def normalize(self, img):
-        return (img-100) / 60
+    def coords_to_mask(self, start_box):
+        # add a 1 as 1st dim to allow concatenating boxes from many images into 1 array
+        # add a 1 as last dim for consistency with image dim count
+        output = np.zeros([1, self.output_height, self.output_width, 1])
+        output[start_box.y0:start_box.y1, start_box.x0:start_box.x1] = 1
+        return output
 
     def add_to_accumulators(self):
-                img_row = self.img_metadata.sample(1)
-                raw_start_img, raw_start_box, raw_end_img, raw_end_box = self.read_raw_imgs_and_boxes(img_row)
+        img_row = self.img_metadata.sample(1)
+        raw_start_img, raw_start_box, raw_end_img, raw_end_box = self.read_raw_imgs_and_boxes(img_row)
 
-                start_img_coords = Coords(0, 0, raw_start_img.shape[1], raw_start_img.shape[0])
-                end_img_coords = Coords(0, 0, raw_end_img.shape[1], raw_end_img.shape[0])
+        start_img_coords = Coords(0, 0, raw_start_img.shape[1], raw_start_img.shape[0])
+        end_img_coords = Coords(0, 0, raw_end_img.shape[1], raw_end_img.shape[0])
 
-                start_img, start_box = crop_and_resize(raw_start_img, start_img_coords, raw_start_box,
-                                                       self.output_width, self.output_height,
-                                                       random_crop=False)
-                start_img, start_box = self.set_array_dims(start_img, start_box)
-                start_img = self.normalize(start_img)
-                for image_crop in range(self.crops_per_image):
-                    end_img, end_box = crop_and_resize(raw_end_img, end_img_coords, raw_end_box,
-                                                       self.output_width, self.output_height,
-                                                       random_crop=True)
-                    end_img, _ = self.set_array_dims(end_img, end_box)
-                    end_img = self.normalize(end_img)
-                    self.X['start_img'] = np.concatenate([self.X['start_img'], start_img])
-                    self.X['start_box'] = np.concatenate([self.X['start_box'], start_box])
-                    self.X['end_img'] = np.concatenate([self.X['end_img'], end_img])
-                    for coord in self.y:
-                        self.y[coord] = np.concatenate([self.y[coord], end_box.as_dict()[coord]])
+        start_img, start_box = crop_and_resize(raw_start_img, start_img_coords, raw_start_box,
+                                               self.output_width, self.output_height,
+                                               random_crop=False)
+        start_box_mask = self.coords_to_mask(start_box)
+        start_img, start_box = self.set_array_dims(start_img, start_box)
+        for image_crop in range(self.crops_per_image):
+            end_img, end_box = crop_and_resize(raw_end_img, end_img_coords, raw_end_box,
+                                               self.output_width, self.output_height,
+                                               random_crop=True)
+            end_img, _ = self.set_array_dims(end_img, end_box)
+            for name, data in (('start_img', start_img), ('start_box', start_box),
+                               ('end_img', end_img), ('start_box_mask', start_box_mask)):
+                self.X[name] = np.concatenate([self.X[name], data])
+            for coord in self.y:
+                self.y[coord] = np.concatenate([self.y[coord], end_box.as_dict()[coord]])
 
 
     def set_array_dims(self, img, box):
