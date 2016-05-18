@@ -11,6 +11,11 @@ from time import sleep
 img_edge_size = 100
 backend_id = 'th'
 
+if backend_id == 'tf':
+    channel_index = 3
+else:
+    channel_index = 1
+
 if backend_id == 'th':
     img_shape = (3, img_edge_size, img_edge_size)
     mask_shape = (1, img_edge_size, img_edge_size)
@@ -28,7 +33,7 @@ layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
                                 dim_ordering=backend_id)(layer)
 layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
                                 dim_ordering=backend_id)(layer)
-layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
                                 dim_ordering=backend_id)(layer)
 reusable_img_featurizer = Model(generic_img, layer)
 
@@ -46,13 +51,14 @@ start_box_mask = Input(shape=mask_shape, name='start_box_mask')
 
 # to downscale mask the same way we did the images, we use the same pooling layers
 # This is works ONLY if border_mode = same for all conv layers in the image featurizer
-start_box_mask_layer = start_box_mask
 pooling_layers = [layer for layer in reusable_img_featurizer.layers if "pooling" in layer.name]
+start_box_mask_layer = start_box_mask
 for layer in pooling_layers:
     start_box_mask_layer = layer(start_box_mask_layer)
 
+
 start_img_features = merge([start_img_features, start_box_mask_layer],
-                           mode='concat', concat_axis=1)
+                           mode='concat', concat_axis=channel_index)
 start_img_features = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
                                    dim_ordering=backend_id)(start_img_features)
 
@@ -66,9 +72,8 @@ layer = merge([start_img_features, end_img_features, start_box],
               concat_axis=1)
 
 ########################## FC LAYERS AFTER MERGE ##########################
-dense_layer_widths = [100, 100]
+dense_layer_widths = [60, 60]
 for n_nodes in dense_layer_widths:
-    layer = LeakyReLU()(layer)
     layer = Dense(n_nodes, activation='relu')(layer)
 
 ########################## CREATE OUTPUT #################################
@@ -97,13 +102,12 @@ mygen = CompositeGenerator(output_width = img_edge_size,
                           desired_dim_ordering = backend_id).flow()
 print('Fitting')
 mymodel.fit_generator(mygen, samples_per_epoch=1000, nb_epoch=6,
-					   max_q_size=5, verbose=1)
+					  max_q_size=5, verbose=1)
 
-#################### PRINT MEAN AND SD
+################## PRINT MEAN AND SD OF BOX LOCATIONS ###################
 sleep(1)
-a = next(mygen)
-preds = mymodel.predict(a[0])
-actuals = a[1]
+X, y = next(mygen)
+preds = mymodel.predict(X)
 print('Mean Locations For Predicted Boxes:  ', [i.mean() for i in preds])
 print('Std dev of locations for predicted boxes:  ', [i.std() for i in preds])
-print('Loss on new batch:  ', mymodel.evaluate(a))
+print('Loss on new batch:  ', mymodel.evaluate(X, y))

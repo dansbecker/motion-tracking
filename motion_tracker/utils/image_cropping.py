@@ -191,9 +191,9 @@ def crop_and_resize(img, img_coords, box_coords, output_width, output_height, ra
                  Cropped area is twice as large (and centered) on box either way
     '''
 
-    # Placeholder to get into the while loop the first time. 
-    cropped_img = np.zeros((2, 2))
-    while 0 not in cropped_img.shape: 
+    # Placeholder to get into the while loop the first time.
+    cropped_img = np.zeros((0, 2))
+    while 0 in cropped_img.shape:
         crop_coords, box_after_crop = get_crop_coords(box_coords, img_coords, random_crop)
         cropped_img = img[crop_coords.y0:crop_coords.y1,
                           crop_coords.x0:crop_coords.x1]
