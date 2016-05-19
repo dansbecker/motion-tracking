@@ -162,8 +162,14 @@ class ImagenetGenerator(ImagePairAndBoxGen):
 
 
     def read_raw_imgs_and_boxes(self, img_row):
-        raw_img = cv2.imread(self.raw_image_dir + img_row.filename.values[0])
-        raw_start_box = Coords(img_row.x0, img_row.y0, img_row.x1, img_row.y1)
+        have_good_image = False
+        while not have_good_image:
+            raw_img = cv2.imread(self.raw_image_dir + img_row.filename.values[0])
+            raw_start_box = Coords(img_row.x0, img_row.y0, img_row.x1, img_row.y1)
+            # verify image dimensions
+            if (raw_img.shape[0] == img_row.height.iloc[0]) and \
+               (raw_img.shape[1] == img_row.width.iloc[0]):
+                    have_good_image = True
         # reuse the one image/box for both start and end
         return raw_img, raw_start_box, raw_img, raw_start_box
 

@@ -97,11 +97,11 @@ print(mymodel.summary())
 ################################ FIT MODEL ################################
 mygen = CompositeGenerator(output_width = img_edge_size,
 						  output_height = img_edge_size,
-                          crops_per_image=5,
-                          batch_size = 10,
+                          crops_per_image=3,
+                          batch_size = 6,
                           desired_dim_ordering = backend_id).flow()
 print('Fitting')
-mymodel.fit_generator(mygen, samples_per_epoch=1000, nb_epoch=6,
+mymodel.fit_generator(mygen, samples_per_epoch=1000, nb_epoch=100,
 					  max_q_size=5, verbose=1)
 
 ################## PRINT MEAN AND SD OF BOX LOCATIONS ###################
