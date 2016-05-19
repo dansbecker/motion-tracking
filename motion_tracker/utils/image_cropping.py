@@ -23,6 +23,9 @@ class Coords(object):
         return(", ".join([str(i) for i in (self.x0, self.y0, self.x1, self.y1)]))
     def as_array(self):
         return np.array([self.x0, self.y0, self.x1, self.y1])
+    def as_dict(self):
+        return {'x0': [self.x0], 'y0': [self.y0],
+                'x1': [self.x1], 'y1': [self.y1]}
 
 def get_cropping_params(bb_loc_laplace_b_param = 0.2,
                     bb_size_laplace_b_param = 0.06,
@@ -188,9 +191,13 @@ def crop_and_resize(img, img_coords, box_coords, output_width, output_height, ra
                  Cropped area is twice as large (and centered) on box either way
     '''
 
-    # Placeholder to get into the while loop the first time. 
-    cropped_img = np.zeros((2, 2))
-    while 0 not in cropped_img.shape: 
+    # Placeholder to get into the while loop the first time.
+    cropped_img = np.zeros((0, 2))
+    counter = 0
+    while 0 in cropped_img.shape:
+        counter += 1
+        if counter == 100:
+            import pdb; pdb.set_trace()
         crop_coords, box_after_crop = get_crop_coords(box_coords, img_coords, random_crop)
         cropped_img = img[crop_coords.y0:crop_coords.y1,
                           crop_coords.x0:crop_coords.x1]
