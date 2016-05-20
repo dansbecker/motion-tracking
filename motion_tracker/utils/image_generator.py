@@ -82,8 +82,10 @@ class ImagePairAndBoxGen(object):
         return output
 
     def add_to_accumulators(self):
-        img_row = self.img_metadata.sample(1)
-        raw_start_img, raw_start_box, raw_end_img, raw_end_box = self.read_raw_imgs_and_boxes(img_row)
+        have_good_img = False
+        while not have_good_img: 
+            img_row = self.img_metadata.sample(1)
+            raw_start_img, raw_start_box, raw_end_img, raw_end_box, have_good_img = self.read_raw_imgs_and_boxes(img_row)
 
         start_img_coords = Coords(0, 0, raw_start_img.shape[1], raw_start_img.shape[0])
         end_img_coords = Coords(0, 0, raw_end_img.shape[1], raw_end_img.shape[0])
@@ -163,15 +165,14 @@ class ImagenetGenerator(ImagePairAndBoxGen):
 
     def read_raw_imgs_and_boxes(self, img_row):
         have_good_image = False
-        while not have_good_image:
-            raw_img = cv2.imread(self.raw_image_dir + img_row.filename.values[0])
-            raw_start_box = Coords(img_row.x0, img_row.y0, img_row.x1, img_row.y1)
-            # verify image dimensions
-            if (raw_img.shape[0] == img_row.height.iloc[0]) and \
-               (raw_img.shape[1] == img_row.width.iloc[0]):
-                    have_good_image = True
+        raw_img = cv2.imread(self.raw_image_dir + img_row.filename.values[0])
+        raw_start_box = Coords(img_row.x0, img_row.y0, img_row.x1, img_row.y1)
+        # verify image dimensions
+        if (raw_img.shape[0] == img_row.height.iloc[0]) and \
+           (raw_img.shape[1] == img_row.width.iloc[0]):
+                have_good_image = True
         # reuse the one image/box for both start and end
-        return raw_img, raw_start_box, raw_img, raw_start_box
+        return raw_img, raw_start_box, raw_img, raw_start_box, have_good_image
 
 
 
@@ -189,22 +190,22 @@ class AlovGenerator(ImagePairAndBoxGen):
                                                desired_dim_ordering = desired_dim_ordering)
 
     def read_raw_imgs_and_boxes(self, img_row):
+        have_good_image = True
         raw_start_img = cv2.imread(self.raw_image_dir + img_row.filename_start.values[0])
         raw_end_img = cv2.imread(self.raw_image_dir + img_row.filename_end.values[0])
         raw_start_box = Coords(img_row.x0_start, img_row.y0_start,
                                   img_row.x1_start, img_row.y1_start)
         raw_end_box = Coords(img_row.x0_end, img_row.y0_end,
                                 img_row.x1_end, img_row.y1_end)
-        return raw_start_img, raw_start_box, raw_end_img, raw_end_box
+        return raw_start_img, raw_start_box, raw_end_img, raw_end_box, have_good_image
 
 if __name__ == '__main__':
     img_size=256
     my_gen = CompositeGenerator(crops_per_image=2, batch_size=20,
                                 output_height=img_size, output_width=img_size,
                                 desired_dim_ordering='tf').flow()
-    X, y = next(my_gen)
     for i in range(10):
         show_img(X['start_img'][i],
-                 X['start_box'][i])
+                box={'start_box': X['start_box'][i]})
         show_img(X['end_img'][i],
                  np.array([y[coord][i] for coord in ('x0', 'y0', 'x1', 'y1')]))
