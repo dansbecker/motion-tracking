@@ -195,9 +195,6 @@ def crop_and_resize(img, img_coords, box_coords, output_width, output_height, ra
     cropped_img = np.zeros((0, 2))
     counter = 0
     while 0 in cropped_img.shape:
-        counter += 1
-        if counter == 100:
-            import pdb; pdb.set_trace()
         crop_coords, box_after_crop = get_crop_coords(box_coords, img_coords, random_crop)
         cropped_img = img[crop_coords.y0:crop_coords.y1,
                           crop_coords.x0:crop_coords.x1]
