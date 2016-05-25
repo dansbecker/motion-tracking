@@ -24,10 +24,10 @@ def make_model(img_edge_size, backend_id):
 
     ###### DEFINE FEATURIZER APPLIED TO STARTING AND ENDING IMAGES ######
     generic_img = Input(shape=img_shape)
-    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(generic_img)
     layer = MaxPooling2D(pool_size=(3, 3), dim_ordering=backend_id)(layer)
-    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
     layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
@@ -53,9 +53,7 @@ def make_model(img_edge_size, backend_id):
 
     start_img_features = merge([start_img_features, start_box_mask_layer],
                                 mode='concat', concat_axis=channel_index)
-    start_img_features = Convolution2D(30, 2, 2, activation='relu', border_mode='same',
-                                       dim_ordering=backend_id)(start_img_features)
-    start_img_features = Convolution2D(30, 2, 2, activation='relu', border_mode='same',
+    start_img_features = Convolution2D(20, 3, 3, activation='relu', border_mode='same',
                                        dim_ordering=backend_id)(start_img_features)
 
     ################## FLATTEN AND MERGE EVERYTHING TOGETHER ################
@@ -101,14 +99,14 @@ def fit_model(my_model, my_gen, img_edge_size, backend_id):
     '''
     print('Fitting model')
 
-    my_model.fit_generator(my_gen, samples_per_epoch=2000,
+    my_model.fit_generator(my_gen, samples_per_epoch=5000,
                            nb_epoch=200, max_q_size=5, verbose=1)
     return my_model
 
 
 
 if __name__ == "__main__":
-    img_edge_size = 100
+    img_edge_size = 140
     backend_id = 'th'
     weights_fname = './work/model_weights.h5'
     model_spec = './work/model_architecture.json'
