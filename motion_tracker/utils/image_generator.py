@@ -83,7 +83,7 @@ class ImagePairAndBoxGen(object):
 
     def add_to_accumulators(self):
         have_good_img = False
-        while not have_good_img: 
+        while not have_good_img:
             img_row = self.img_metadata.sample(1)
             raw_start_img, raw_start_box, raw_end_img, raw_end_box, have_good_img = self.read_raw_imgs_and_boxes(img_row)
 
