@@ -1,113 +1,136 @@
-from keras.layers import Input, Dense, merge, Flatten
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers import Input, Dense, merge, Flatten, Convolution2D, MaxPooling2D, Dropout
 from keras.models import Model
 from motion_tracker.utils.image_generator import CompositeGenerator
-from keras import backend as K
+import os
 from time import sleep
 
+def make_model(img_edge_size, backend_id):
+    '''returns untraned version model used for image tracking
+        img_edge: number of pixels for images (height and width are same)
+        backend_id: either "tf" or "th"
+    '''
 
-############################### SETUP ###############################
-img_edge_size = 100
-backend_id = 'th'
+    if backend_id == 'tf':
+        channel_index = 3
+    else:
+        channel_index = 1
 
-if backend_id == 'tf':
-    channel_index = 3
-else:
-    channel_index = 1
+    if backend_id == 'th':
+        img_shape = (3, img_edge_size, img_edge_size)
+        mask_shape = (1, img_edge_size, img_edge_size)
+    if backend_id == 'tf':
+        img_shape = (img_edge_size, img_edge_size, 3)
+        mask_shape = (img_edge_size, img_edge_size, 1)
 
-if backend_id == 'th':
-    img_shape = (3, img_edge_size, img_edge_size)
-    mask_shape = (1, img_edge_size, img_edge_size)
-if backend_id == 'tf':
-    img_shape = (img_edge_size, img_edge_size, 3)
-    mask_shape = (img_edge_size, img_edge_size, 1)
+    ###### DEFINE FEATURIZER APPLIED TO STARTING AND ENDING IMAGES ######
+    generic_img = Input(shape=img_shape)
+    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
+                          dim_ordering=backend_id)(generic_img)
+    layer = MaxPooling2D(pool_size=(3, 3), dim_ordering=backend_id)(layer)
+    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
+                          dim_ordering=backend_id)(layer)
+    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+                          dim_ordering=backend_id)(layer)
+    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+                          dim_ordering=backend_id)(layer)
+    reusable_img_featurizer = Model(generic_img, layer)
+
+    ########### APPLY FEATURIZER TO STARTING AND ENDING IMAGES ###########
+    start_img = Input(shape=img_shape, name='start_img')
+    start_img_features = reusable_img_featurizer(start_img)
+    end_img = Input(shape=img_shape, name='end_img')
+    end_img_features = reusable_img_featurizer(end_img)
+
+    #### ADD MASK OF STARTING BOUNDING BOX TO FEATURIZED STARTING IMG ####
+    start_box_mask = Input(shape=mask_shape, name='start_box_mask')
+
+    # to downscale mask the same way we did the images, we use the same pooling layers
+    # This is works ONLY if border_mode = same for all conv layers in the image featurizer
+    pooling_layers = [layer for layer in reusable_img_featurizer.layers if "pooling" in layer.name]
+    start_box_mask_layer = start_box_mask
+    for layer in pooling_layers:
+        start_box_mask_layer = layer(start_box_mask_layer)
+
+    start_img_features = merge([start_img_features, start_box_mask_layer],
+                                mode='concat', concat_axis=channel_index)
+    start_img_features = Convolution2D(20, 3, 3, activation='relu', border_mode='same',
+                                       dim_ordering=backend_id)(start_img_features)
+
+    ################## FLATTEN AND MERGE EVERYTHING TOGETHER ################
+
+    start_box = Input(shape=(4,), name='start_box')
+    start_img_features = Flatten()(start_img_features)
+    end_img_features = Flatten()(end_img_features)
+    layer = merge([start_img_features, end_img_features, start_box],
+                   mode='concat',
+                   concat_axis=1)
+
+    ########################## FC LAYERS AFTER MERGE ##########################
+    dense_layer_widths = [250, 250, 250]
+    for n_nodes in dense_layer_widths:
+        layer = Dense(n_nodes, activation='relu')(layer)
+        layer = Dropout(0.5)(layer)
+
+    ########################## CREATE OUTPUT #################################
+    x0 = Dense(1, activation='linear', name='x0')(layer)
+    y0 = Dense(1, activation='linear', name='y0')(layer)
+    x1 = Dense(1, activation='linear', name='x1')(layer)
+    y1 = Dense(1, activation='linear', name='y1')(layer)
+
+    my_model = Model(input=[start_img, end_img, start_box, start_box_mask],
+                    output=[x0, y0, x1, y1])
+    my_model.compile(loss ={'x0': 'mean_absolute_error',
+                           'y0': 'mean_absolute_error',
+                           'x1': 'mean_absolute_error',
+                           'y1': 'mean_absolute_error'},
+                           loss_weights={'x0': 0.25, 'y0': 0.25,
+                                         'x1': 0.25, 'y1': 0.25},
+                            optimizer='adam')
+    return my_model
 
 
-###### DEFINE FEATURIZER APPLIED TO STARTING AND ENDING IMAGES ######
-generic_img = Input(shape=img_shape)
-layer = Convolution2D(20, 3, 3, activation='relu', border_mode='same',
-                                dim_ordering=backend_id)(generic_img)
-layer = MaxPooling2D(pool_size=(3, 3), dim_ordering=backend_id)(layer)
-layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
-                                dim_ordering=backend_id)(layer)
-layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
-                                dim_ordering=backend_id)(layer)
-layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
-                                dim_ordering=backend_id)(layer)
-reusable_img_featurizer = Model(generic_img, layer)
+def fit_model(my_model, my_gen, img_edge_size, backend_id):
+    '''Fits and returns model using image/box pairs from my_gen
+
+        my_model: the keras model object to be fit
+        my_gen: the generator that supplies training data
+        img_edge: number of pixels for images (height and width are same)
+        backend_id: either "tf" or "th"
+    '''
+    print('Fitting model')
+
+    my_model.fit_generator(my_gen, samples_per_epoch=5000,
+                           nb_epoch=200, max_q_size=5, verbose=1)
+    return my_model
 
 
-########### APPLY FEATURIZER TO STARTING AND ENDING IMAGES ###########
-start_img = Input(shape=img_shape, name='start_img')
-start_img_features = reusable_img_featurizer(start_img)
-end_img = Input(shape=img_shape, name='end_img')
-end_img_features = reusable_img_featurizer(end_img)
+
+if __name__ == "__main__":
+    img_edge_size = 140
+    backend_id = 'th'
+    weights_fname = './work/model_weights.h5'
+    model_spec = './work/model_architecture.json'
+    my_gen = CompositeGenerator(output_width = img_edge_size,
+						        output_height = img_edge_size,
+                                crops_per_image=5,
+                                batch_size = 10,
+                                desired_dim_ordering = backend_id).flow()
+
+    my_model = make_model(img_edge_size, backend_id)
+    if os.path.exists(weights_fname):
+        print('Loading saved model')
+        my_model.load_weights(weights_fname)
+    print(my_model.summary())
+
+    my_model = fit_model(my_model, my_gen, img_edge_size, backend_id)
+    print('Saving model')
+    my_model.save_weights(weights_fname, overwrite=True)
 
 
-#### ADD MASK OF STARTING BOUNDING BOX TO FEATURIZED STARTING IMG ####
-
-start_box_mask = Input(shape=mask_shape, name='start_box_mask')
-
-# to downscale mask the same way we did the images, we use the same pooling layers
-# This is works ONLY if border_mode = same for all conv layers in the image featurizer
-pooling_layers = [layer for layer in reusable_img_featurizer.layers if "pooling" in layer.name]
-start_box_mask_layer = start_box_mask
-for layer in pooling_layers:
-    start_box_mask_layer = layer(start_box_mask_layer)
-
-
-start_img_features = merge([start_img_features, start_box_mask_layer],
-                           mode='concat', concat_axis=channel_index)
-start_img_features = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
-                                   dim_ordering=backend_id)(start_img_features)
-
-################## FLATTEN AND MERGE EVERYTHING TOGETHER ################
-
-start_box = Input(shape=(4,), name='start_box')
-start_img_features = Flatten()(start_img_features)
-end_img_features = Flatten()(end_img_features)
-layer = merge([start_img_features, end_img_features, start_box],
-              mode='concat',
-              concat_axis=1)
-
-########################## FC LAYERS AFTER MERGE ##########################
-dense_layer_widths = [60, 60]
-for n_nodes in dense_layer_widths:
-    layer = Dense(n_nodes, activation='relu')(layer)
-
-########################## CREATE OUTPUT #################################
-x0 = Dense(1, activation='linear', name='x0')(layer)
-y0 = Dense(1, activation='linear', name='y0')(layer)
-x1 = Dense(1, activation='linear', name='x1')(layer)
-y1 = Dense(1, activation='linear', name='y1')(layer)
-
-mymodel = Model(input=[start_img, end_img, start_box, start_box_mask], output=[x0, y0, x1, y1])
-
-mymodel.compile(loss ={'x0': 'mean_absolute_error',
-                        'y0': 'mean_absolute_error',
-                        'x1': 'mean_absolute_error',
-                        'y1': 'mean_absolute_error'},
-                        loss_weights={'x0': 0.25, 'y0': 0.25,
-                                      'x1': 0.25, 'y1': 0.25},
-                optimizer='adam')
-
-print(mymodel.summary())
-
-################################ FIT MODEL ################################
-mygen = CompositeGenerator(output_width = img_edge_size,
-						  output_height = img_edge_size,
-                          crops_per_image=3,
-                          batch_size = 6,
-                          desired_dim_ordering = backend_id).flow()
-print('Fitting')
-mymodel.fit_generator(mygen, samples_per_epoch=1000, nb_epoch=100,
-					  max_q_size=5, verbose=1)
-
-################## PRINT MEAN AND SD OF BOX LOCATIONS ###################
-sleep(1)
-X, y = next(mygen)
-preds = mymodel.predict(X)
-print('Mean Locations For Predicted Boxes:  ', [i.mean() for i in preds])
-print('Std dev of locations for predicted boxes:  ', [i.std() for i in preds])
-print('Loss on new batch:  ', mymodel.evaluate(X, y))
+    sleep(1)    # let generator finish existing threads
+    print('Model Results')
+    X, y = next(my_gen)
+    preds = my_model.predict(X)
+    print('Mean Locations For Predicted Boxes:  ', [i.mean() for i in preds])
+    print('Std dev of locations for predicted boxes:  ', [i.std() for i in preds])
+    print('Loss on new batch:  ', my_model.evaluate(X, y))
