@@ -1,6 +1,4 @@
-from keras.layers import Input, Dense, merge, Flatten
-from keras.layers.convolutional import Convolution2D, MaxPooling2D
-from keras.layers.advanced_activations import LeakyReLU
+from keras.layers import Input, Dense, merge, Flatten, Convolution2D, MaxPooling2D, Dropout
 from keras.models import Model
 from motion_tracker.utils.image_generator import CompositeGenerator
 import os
@@ -26,14 +24,14 @@ def make_model(img_edge_size, backend_id):
 
     ###### DEFINE FEATURIZER APPLIED TO STARTING AND ENDING IMAGES ######
     generic_img = Input(shape=img_shape)
-    layer = Convolution2D(20, 3, 3, activation='relu', border_mode='same',
+    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(generic_img)
     layer = MaxPooling2D(pool_size=(3, 3), dim_ordering=backend_id)(layer)
-    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
+    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
-    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
+    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
-    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
+    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
     reusable_img_featurizer = Model(generic_img, layer)
 
@@ -55,7 +53,9 @@ def make_model(img_edge_size, backend_id):
 
     start_img_features = merge([start_img_features, start_box_mask_layer],
                                 mode='concat', concat_axis=channel_index)
-    start_img_features = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+    start_img_features = Convolution2D(30, 2, 2, activation='relu', border_mode='same',
+                                       dim_ordering=backend_id)(start_img_features)
+    start_img_features = Convolution2D(30, 2, 2, activation='relu', border_mode='same',
                                        dim_ordering=backend_id)(start_img_features)
 
     ################## FLATTEN AND MERGE EVERYTHING TOGETHER ################
@@ -68,9 +68,10 @@ def make_model(img_edge_size, backend_id):
                    concat_axis=1)
 
     ########################## FC LAYERS AFTER MERGE ##########################
-    dense_layer_widths = [60, 60]
+    dense_layer_widths = [250, 250, 250]
     for n_nodes in dense_layer_widths:
         layer = Dense(n_nodes, activation='relu')(layer)
+        layer = Dropout(0.5)(layer)
 
     ########################## CREATE OUTPUT #################################
     x0 = Dense(1, activation='linear', name='x0')(layer)
@@ -88,6 +89,23 @@ def make_model(img_edge_size, backend_id):
                                          'x1': 0.25, 'y1': 0.25},
                             optimizer='adam')
     return my_model
+
+
+def fit_model(my_model, my_gen, img_edge_size, backend_id):
+    '''Fits and returns model using image/box pairs from my_gen
+
+        my_model: the keras model object to be fit
+        my_gen: the generator that supplies training data
+        img_edge: number of pixels for images (height and width are same)
+        backend_id: either "tf" or "th"
+    '''
+    print('Fitting model')
+
+    my_model.fit_generator(my_gen, samples_per_epoch=2000,
+                           nb_epoch=200, max_q_size=5, verbose=1)
+    return my_model
+
+
 
 if __name__ == "__main__":
     img_edge_size = 100
