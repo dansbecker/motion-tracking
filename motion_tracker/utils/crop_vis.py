@@ -28,7 +28,8 @@ def show_stages_of_random_crop(img, box_coords, output_width=256, output_height=
     show_img(final_img, final_box_coords.as_array())
 
 
-def show_img(img, boxes=None, window_name="Happy Dance Image", msec_to_show_for=1500):
+def show_img(img, boxes=None, window_name="Happy Dance Image", msec_to_show_for=1500, 
+             save=False, filepath='None'):
     """Show an image, potentially with surrounding bounding boxes
 
     Args:
@@ -49,6 +50,9 @@ def show_img(img, boxes=None, window_name="Happy Dance Image", msec_to_show_for=
                           pt2=(box_coords[2], box_coords[3]),
                           color=color_dct[box_type],
                           thickness=2)
-    cv2.imshow(window_name, img_copy)
-    cv2.waitKey(msec_to_show_for)
-    cv2.destroyWindow(window_name)
+    if not save: 
+        cv2.imshow(window_name, img_copy)
+        cv2.waitKey(msec_to_show_for)
+        cv2.destroyWindow(window_name)
+    else: 
+        cv2.imwrite(filepath, img_copy)

@@ -1,8 +1,11 @@
-from keras.layers import Input, Dense, merge, Flatten, Convolution2D, MaxPooling2D, Dropout
+from keras.layers import Input, Dense, merge, Flatten, Convolution2D, MaxPooling2D, Dropout, ZeroPadding2D
 from keras.models import Model
+from keras.layers.normalization import BatchNormalization
 from motion_tracker.utils.image_generator import CompositeGenerator
 import os
+import numpy as np
 from time import sleep
+from motion_tracker.utils.crop_vis import show_img
 
 def make_model(img_edge_size, backend_id):
     '''returns untraned version model used for image tracking
@@ -24,15 +27,32 @@ def make_model(img_edge_size, backend_id):
 
     ###### DEFINE FEATURIZER APPLIED TO STARTING AND ENDING IMAGES ######
     generic_img = Input(shape=img_shape)
-    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
-                          dim_ordering=backend_id)(generic_img)
-    layer = MaxPooling2D(pool_size=(3, 3), dim_ordering=backend_id)(layer)
-    layer = Convolution2D(30, 3, 3, activation='relu', border_mode='same',
+    layer = ZeroPadding2D(padding=(2, 2), dim_ordering=backend_id)(generic_img)
+    layer = Convolution2D(24, 11, 11, activation='relu',
+                          border_mode='same', dim_ordering=backend_id)(layer)
+    layer = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), 
+                         dim_ordering=backend_id)(layer)
+    layer = BatchNormalization()(layer)
+    layer = ZeroPadding2D(padding=(1, 1), dim_ordering=backend_id)(layer)
+    layer = Convolution2D(56, 5, 5, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
-    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+    layer = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), 
+                         dim_ordering=backend_id)(layer)
+    layer = BatchNormalization()(layer)
+    layer = ZeroPadding2D(padding=(1, 1), dim_ordering=backend_id)(layer)
+    layer = Convolution2D(96, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
-    layer = Convolution2D(40, 3, 3, activation='relu', border_mode='same',
+    layer = BatchNormalization()(layer)
+    layer = ZeroPadding2D(padding=(1, 1), dim_ordering=backend_id)(layer)
+    layer = Convolution2D(96, 3, 3, activation='relu', border_mode='same',
                           dim_ordering=backend_id)(layer)
+    layer = BatchNormalization()(layer)
+    layer = ZeroPadding2D(padding=(1, 1), dim_ordering=backend_id)(layer)
+    layer = Convolution2D(64, 3, 3, activation='relu', border_mode='same',
+                          dim_ordering=backend_id)(layer)
+    layer = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), 
+                         dim_ordering=backend_id)(layer)
+    layer = BatchNormalization()(layer)
     reusable_img_featurizer = Model(generic_img, layer)
 
     ########### APPLY FEATURIZER TO STARTING AND ENDING IMAGES ###########
@@ -46,7 +66,7 @@ def make_model(img_edge_size, backend_id):
 
     # to downscale mask the same way we did the images, we use the same pooling layers
     # This is works ONLY if border_mode = same for all conv layers in the image featurizer
-    pooling_layers = [layer for layer in reusable_img_featurizer.layers if "pooling" in layer.name]
+    pooling_layers = [layer for layer in reusable_img_featurizer.layers if ("pooling" in layer.name) or ("zeropadding" in layer.name)]
     start_box_mask_layer = start_box_mask
     for layer in pooling_layers:
         start_box_mask_layer = layer(start_box_mask_layer)
@@ -66,10 +86,9 @@ def make_model(img_edge_size, backend_id):
                    concat_axis=1)
 
     ########################## FC LAYERS AFTER MERGE ##########################
-    dense_layer_widths = [250, 250, 250]
+    dense_layer_widths = [1024, 1024, 250]
     for n_nodes in dense_layer_widths:
-        layer = Dense(n_nodes, activation='relu')(layer)
-        layer = Dropout(0.5)(layer)
+        layer = Dense(n_nodes, activation='linear')(layer)
 
     ########################## CREATE OUTPUT #################################
     x0 = Dense(1, activation='linear', name='x0')(layer)
@@ -99,21 +118,21 @@ def fit_model(my_model, my_gen, img_edge_size, backend_id):
     '''
     print('Fitting model')
 
-    my_model.fit_generator(my_gen, samples_per_epoch=5000,
-                           nb_epoch=200, max_q_size=5, verbose=1)
+    my_model.fit_generator(my_gen, samples_per_epoch=2000,
+                           nb_epoch=100, max_q_size=5, verbose=1)
     return my_model
 
 
 
 if __name__ == "__main__":
-    img_edge_size = 140
+    img_edge_size = 224
     backend_id = 'th'
     weights_fname = './work/model_weights.h5'
     model_spec = './work/model_architecture.json'
     my_gen = CompositeGenerator(output_width = img_edge_size,
 						        output_height = img_edge_size,
-                                crops_per_image=5,
-                                batch_size = 10,
+                                crops_per_image=10,
+                                batch_size = 50,
                                 desired_dim_ordering = backend_id).flow()
 
     my_model = make_model(img_edge_size, backend_id)
@@ -134,3 +153,10 @@ if __name__ == "__main__":
     print('Mean Locations For Predicted Boxes:  ', [i.mean() for i in preds])
     print('Std dev of locations for predicted boxes:  ', [i.std() for i in preds])
     print('Loss on new batch:  ', my_model.evaluate(X, y))
+    for i in range(50): 
+        actual_box = np.array([y[coord][i] for coord in ('x0', 'y0', 'x1', 'y1')])
+        pred_box = np.array([preds[coord][i] for coord in (0, 1, 2, 3)])
+        boxes = {'actual': actual_box, 'predicted': pred_box}
+        img = X['end_img'][i].swapaxes(0, 2)
+        show_img(img, boxes=boxes, save=True, filepath='work/preds/predicted_{}.jpg'.format(i))
+

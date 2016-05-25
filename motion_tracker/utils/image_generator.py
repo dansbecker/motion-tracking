@@ -155,7 +155,7 @@ class ImagenetGenerator(ImagePairAndBoxGen):
                  desired_dim_ordering='tf'):
         """See ImagePairAndBoxGen for argument definitions"""
         self.raw_image_dir = 'data/imagenet/images/'
-        self.img_metadata = pd.read_csv('work/imagenet/parsed_bb2.csv')
+        self.img_metadata = pd.read_csv('work/imagenet/filtered_bb.csv')
         super(ImagenetGenerator, self).__init__(crops_per_image = crops_per_image,
                                                batch_size = batch_size,
                                                output_width = output_width,
