@@ -53,6 +53,11 @@ def make_model(img_edge_size, backend_id):
     layer = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), 
                          dim_ordering=backend_id)(layer)
     layer = BatchNormalization()(layer)
+    layer = Convolution2D(20, 3, 3, activation='relu', border_mode='same',
+                          dim_ordering=backend_id)(layer)
+    layer = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), 
+                         dim_ordering=backend_id)(layer)
+    layer = BatchNormalization()(layer)
     reusable_img_featurizer = Model(generic_img, layer)
 
     ########### APPLY FEATURIZER TO STARTING AND ENDING IMAGES ###########
@@ -60,21 +65,6 @@ def make_model(img_edge_size, backend_id):
     start_img_features = reusable_img_featurizer(start_img)
     end_img = Input(shape=img_shape, name='end_img')
     end_img_features = reusable_img_featurizer(end_img)
-
-    #### ADD MASK OF STARTING BOUNDING BOX TO FEATURIZED STARTING IMG ####
-    start_box_mask = Input(shape=mask_shape, name='start_box_mask')
-
-    # to downscale mask the same way we did the images, we use the same pooling layers
-    # This is works ONLY if border_mode = same for all conv layers in the image featurizer
-    pooling_layers = [layer for layer in reusable_img_featurizer.layers if ("pooling" in layer.name) or ("zeropadding" in layer.name)]
-    start_box_mask_layer = start_box_mask
-    for layer in pooling_layers:
-        start_box_mask_layer = layer(start_box_mask_layer)
-
-    start_img_features = merge([start_img_features, start_box_mask_layer],
-                                mode='concat', concat_axis=channel_index)
-    start_img_features = Convolution2D(20, 3, 3, activation='relu', border_mode='same',
-                                       dim_ordering=backend_id)(start_img_features)
 
     ################## FLATTEN AND MERGE EVERYTHING TOGETHER ################
 
@@ -96,7 +86,7 @@ def make_model(img_edge_size, backend_id):
     x1 = Dense(1, activation='linear', name='x1')(layer)
     y1 = Dense(1, activation='linear', name='y1')(layer)
 
-    my_model = Model(input=[start_img, end_img, start_box, start_box_mask],
+    my_model = Model(input=[start_img, end_img, start_box],
                     output=[x0, y0, x1, y1])
     my_model.compile(loss ={'x0': 'mean_absolute_error',
                            'y0': 'mean_absolute_error',
