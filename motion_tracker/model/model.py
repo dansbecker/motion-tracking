@@ -68,10 +68,9 @@ def make_model(img_edge_size, backend_id):
 
     ################## FLATTEN AND MERGE EVERYTHING TOGETHER ################
 
-    start_box = Input(shape=(4,), name='start_box')
     start_img_features = Flatten()(start_img_features)
     end_img_features = Flatten()(end_img_features)
-    layer = merge([start_img_features, end_img_features, start_box],
+    layer = merge([start_img_features, end_img_features],
                    mode='concat',
                    concat_axis=1)
 
@@ -86,7 +85,7 @@ def make_model(img_edge_size, backend_id):
     x1 = Dense(1, activation='linear', name='x1')(layer)
     y1 = Dense(1, activation='linear', name='y1')(layer)
 
-    my_model = Model(input=[start_img, end_img, start_box],
+    my_model = Model(input=[start_img, end_img],
                     output=[x0, y0, x1, y1])
     my_model.compile(loss ={'x0': 'mean_absolute_error',
                            'y0': 'mean_absolute_error',
