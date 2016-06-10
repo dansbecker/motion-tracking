@@ -44,6 +44,8 @@ At this point, we've gotten some encouraging results. Below are 10 randomly sele
 <img src="./readme_imgs/start_181.jpg" width="175"\>
 <img src="./readme_imgs/end_181.jpg" width="175"\>
 
+## Error Analysis
+
 In plotting the actual versus predicted coordinates below for a random sample of 500 images, we can get a sense of how our network is learning. At the top-left we have x0, top right y0, bottom-left x1, and bottom-right x1. These correspond to the upper left corner (x0, y0) and bottom right corner (x1, y1) of the bounding. The kernal density estimates below show that we are on average predicting fairly well (as seems to also be indicated by the images above), but still have some variabilty in how well those predictions are lining up to the ground truth. 
 
 <img  width="50"\>
