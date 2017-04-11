@@ -9,11 +9,11 @@ Our work process included collecting data from the [ALOV300++](http://www.alov30
 
 At this point, we've gotten some encouraging results. Below are 10 randomly selected pairs of starting and ending frames (e.g. one frame after another). The starting frames on the left have the originally given bounding box (green), and the ending frames on the right have the ground truth bounding box (green) as well as the bounding box predicted by our net (red).
 
-![Vid_Start_1](./readme_imgs/start_1.jpg)
-![Vid_Start_2](./readme_imgs/end_1.jpg)
+![Vid_1 Start](./readme_imgs/start_1.jpg)
+![Vid_1 End](./readme_imgs/end_1.jpg)
 
-![image](./readme_imgs/start_21.jpg width=175)
-![image](./readme_imgs/end_21.jpg width=175)
+![Vid 2 Start](./readme_imgs/start_21.jpg)
+![Vid 2 End](./readme_imgs/end_21.jpg)
 
 <img  width="50"\>
 <img src="./readme_imgs/start_41.jpg" width="175"\>
