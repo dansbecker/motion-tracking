@@ -12,8 +12,8 @@ At this point, we've gotten some encouraging results. Below are 10 randomly sele
 ![Vid_Start_1](./readme_imgs/start_1.jpg)
 ![Vid_Start_2](./readme_imgs/end_1.jpg)
 
-![](./readme_imgs/start_21.jpg width=175)
-![](./readme_imgs/end_21.jpg width=175)
+![image](./readme_imgs/start_21.jpg width=175)
+![image](./readme_imgs/end_21.jpg width=175)
 
 <img  width="50"\>
 <img src="./readme_imgs/start_41.jpg" width="175"\>
