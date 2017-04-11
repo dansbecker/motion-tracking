@@ -12,7 +12,7 @@ At this point, we've gotten some encouraging results. Below are 10 randomly sele
 ![Vid_Start_1](https://github.com/dansbecker/motion-tracking/blob/master/readme_imgs/start_1.jpg)
 ![Vid_Start_2](https://github.com/dansbecker/motion-tracking/blob/master/readme_imgs/end_1.jpg)
 
-<img src="./readme_imgs/start_21.jpg" width="175"\>
+<img src=./readme_imgs/start_21.jpg width=175\>
 <img src="./readme_imgs/end_21.jpg" width="175"\>
 
 <img  width="50"\>
